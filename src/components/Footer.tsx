@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { Facebook, Twitter, Linkedin, Mail, Phone, MapPin } from "lucide-react";
-
+import bgImage from "@/assets/footerlogo.svg";
 const Footer = () => {
   return (
     <footer className="dark-gradient text-white">
@@ -8,7 +8,7 @@ const Footer = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12">
           {/* Company Info */}
           <div>
-            <img src="./src/assets/footerlogo.svg" alt="" className="w-24 h-12 mb-4" />
+            <img src={bgImage} alt="" className="w-24 h-12 mb-4" />
             <p className="text-gray-300 mb-4">
               Your trusted partner for oversize cargo transport across Texas.
             </p>
