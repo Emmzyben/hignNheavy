@@ -122,7 +122,7 @@ const Carrier = () => {
       <Navigation />
 
       {/* Hero Section */}
-      <section className="relative h-[60vh] flex items-center justify-center overflow-hidden">
+      <section className="relative h-[70vh] flex items-center justify-center overflow-hidden">
         <div
           className="absolute inset-0 z-0"
           style={{
@@ -132,7 +132,7 @@ const Carrier = () => {
           }}
         />
         <div className="container mx-auto px-4 z-10 text-center text-white">
-          <h1 className="text-5xl md:text-7xl font-display font-black mb-6">
+          <h1 className="text-3xl md:text-7xl font-display font-black mb-6">
             Become a HighnHeavy <br /> <span className="text-primary">Carrier</span>
           </h1>
           <p className="text-xl md:text-2xl text-gray-100">
