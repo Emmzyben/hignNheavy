@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { User, Plus, Edit, Trash2, Mail, Phone, Shield, Truck } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { User, Plus, Edit, Trash2, Mail, Phone, Shield, Truck, Loader2 } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -8,6 +8,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
+import api from '@/lib/api';
 
 interface Driver {
   id: string;
@@ -20,41 +21,10 @@ interface Driver {
   completedJobs: number;
 }
 
-const initialDrivers: Driver[] = [
-  {
-    id: 'D1',
-    name: 'John Smith',
-    email: 'john.smith@email.com',
-    phone: '(555) 123-4567',
-    license: 'CDL-A',
-    licenseExpiry: '2025-06-15',
-    status: 'available',
-    completedJobs: 47,
-  },
-  {
-    id: 'D2',
-    name: 'Mike Johnson',
-    email: 'mike.j@email.com',
-    phone: '(555) 234-5678',
-    license: 'CDL-A',
-    licenseExpiry: '2024-11-20',
-    status: 'available',
-    completedJobs: 32,
-  },
-  {
-    id: 'D3',
-    name: 'Robert Davis',
-    email: 'r.davis@email.com',
-    phone: '(555) 345-6789',
-    license: 'CDL-A',
-    licenseExpiry: '2025-03-10',
-    status: 'on-job',
-    completedJobs: 65,
-  },
-];
-
 const DriversManagement = () => {
-  const [drivers, setDrivers] = useState<Driver[]>(initialDrivers);
+  const [drivers, setDrivers] = useState<Driver[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingDriver, setEditingDriver] = useState<Driver | null>(null);
   const [formData, setFormData] = useState({
@@ -65,6 +35,35 @@ const DriversManagement = () => {
     licenseExpiry: '',
     password: '',
   });
+
+  useEffect(() => {
+    fetchDrivers();
+  }, []);
+
+  const fetchDrivers = async () => {
+    setLoading(true);
+    try {
+      const response = await api.get('/drivers');
+      if (response.data.success) {
+        const mappedDrivers = response.data.data.map((d: any) => ({
+          id: d.id,
+          name: d.name,
+          email: d.email,
+          phone: d.phone,
+          license: d.license_number,
+          licenseExpiry: d.license_expiry ? new Date(d.license_expiry).toISOString().split('T')[0] : '',
+          status: d.status,
+          completedJobs: d.completed_jobs
+        }));
+        setDrivers(mappedDrivers);
+      }
+    } catch (error: any) {
+      toast.error('Failed to load drivers');
+      console.error(error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const resetForm = () => {
     setFormData({
@@ -96,41 +95,53 @@ const DriversManagement = () => {
     setDialogOpen(true);
   };
 
-  const handleSave = () => {
-    if (!formData.name || !formData.email || !formData.phone) {
+  const handleSave = async () => {
+    if (!formData.name || !formData.email || !formData.phone || (!editingDriver && !formData.password)) {
       toast.error('Please fill in all required fields');
       return;
     }
 
-    if (editingDriver) {
-      setDrivers(drivers.map(d => 
-        d.id === editingDriver.id 
-          ? { ...d, ...formData, status: d.status, completedJobs: d.completedJobs }
-          : d
-      ));
-      toast.success('Driver updated successfully');
-    } else {
-      const newDriver: Driver = {
-        id: `D${Date.now()}`,
-        name: formData.name,
-        email: formData.email,
-        phone: formData.phone,
-        license: formData.license,
-        licenseExpiry: formData.licenseExpiry,
-        status: 'available',
-        completedJobs: 0,
-      };
-      setDrivers([...drivers, newDriver]);
-      toast.success('Driver added successfully. Login credentials sent to email.');
+    setSubmitting(true);
+    try {
+      if (editingDriver) {
+        const response = await api.put(`/drivers/${editingDriver.id}`, {
+          ...formData,
+          status: editingDriver.status // Keep current status
+        });
+        if (response.data.success) {
+          toast.success('Driver updated successfully');
+          fetchDrivers();
+          setDialogOpen(false);
+          resetForm();
+        }
+      } else {
+        const response = await api.post('/drivers', formData);
+        if (response.data.success) {
+          toast.success('Driver added successfully');
+          fetchDrivers();
+          setDialogOpen(false);
+          resetForm();
+        }
+      }
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Error saving driver');
+    } finally {
+      setSubmitting(false);
     }
-
-    setDialogOpen(false);
-    resetForm();
   };
 
-  const handleDelete = (id: string) => {
-    setDrivers(drivers.filter(d => d.id !== id));
-    toast.success('Driver removed');
+  const handleDelete = async (id: string) => {
+    if (!window.confirm('Are you sure you want to remove this driver?')) return;
+
+    try {
+      const response = await api.delete(`/drivers/${id}`);
+      if (response.data.success) {
+        setDrivers(drivers.filter(d => d.id !== id));
+        toast.success('Driver removed');
+      }
+    } catch (error: any) {
+      toast.error('Failed to delete driver');
+    }
   };
 
   const getStatusColor = (status: string) => {
@@ -145,6 +156,15 @@ const DriversManagement = () => {
         return '';
     }
   };
+
+  if (loading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px] space-y-4">
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        <p className="text-muted-foreground font-medium">Loading drivers...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -204,59 +224,67 @@ const DriversManagement = () => {
 
       {/* Drivers List */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-        {drivers.map((driver) => (
-          <Card key={driver.id} className="hover:border-primary/50 transition-colors">
-            <CardContent className="p-6">
-              <div className="flex items-start justify-between">
-                <div className="flex items-start gap-4">
-                  <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center">
-                    <User className="h-6 w-6 text-primary" />
+        {drivers.length === 0 ? (
+          <div className="col-span-full py-12 text-center bg-muted/20 rounded-xl border border-dashed text-muted-foreground">
+            <User className="h-12 w-12 mx-auto mb-4 opacity-20" />
+            <p className="font-medium">No drivers added yet</p>
+            <Button variant="link" onClick={handleOpenAdd}>Add your first driver</Button>
+          </div>
+        ) : (
+          drivers.map((driver) => (
+            <Card key={driver.id} className="hover:border-primary/50 transition-colors">
+              <CardContent className="p-6">
+                <div className="flex items-start justify-between">
+                  <div className="flex items-start gap-4">
+                    <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center">
+                      <User className="h-6 w-6 text-primary" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold text-lg">{driver.name}</h3>
+                      <Badge className={getStatusColor(driver.status)}>
+                        {driver.status.replace('-', ' ')}
+                      </Badge>
+                    </div>
                   </div>
-                  <div>
-                    <h3 className="font-semibold text-lg">{driver.name}</h3>
-                    <Badge className={getStatusColor(driver.status)}>
-                      {driver.status.replace('-', ' ')}
-                    </Badge>
+                  <div className="flex gap-2">
+                    <Button size="icon" variant="ghost" onClick={() => handleOpenEdit(driver)}>
+                      <Edit className="h-4 w-4" />
+                    </Button>
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="text-destructive hover:text-destructive"
+                      onClick={() => handleDelete(driver.id)}
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </Button>
                   </div>
                 </div>
-                <div className="flex gap-2">
-                  <Button size="icon" variant="ghost" onClick={() => handleOpenEdit(driver)}>
-                    <Edit className="h-4 w-4" />
-                  </Button>
-                  <Button 
-                    size="icon" 
-                    variant="ghost" 
-                    className="text-destructive hover:text-destructive"
-                    onClick={() => handleDelete(driver.id)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
 
-              <div className="mt-4 space-y-2">
-                <div className="flex items-center gap-2 text-sm">
-                  <Mail className="h-4 w-4 text-muted-foreground" />
-                  <span>{driver.email}</span>
+                <div className="mt-4 space-y-2">
+                  <div className="flex items-center gap-2 text-sm">
+                    <Mail className="h-4 w-4 text-muted-foreground" />
+                    <span>{driver.email}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm">
+                    <Phone className="h-4 w-4 text-muted-foreground" />
+                    <span>{driver.phone}</span>
+                  </div>
+                  <div className="flex items-center gap-2 text-sm">
+                    <Shield className="h-4 w-4 text-muted-foreground" />
+                    <span>{driver.license} • Expires {driver.licenseExpiry ? new Date(driver.licenseExpiry).toLocaleDateString() : 'N/A'}</span>
+                  </div>
                 </div>
-                <div className="flex items-center gap-2 text-sm">
-                  <Phone className="h-4 w-4 text-muted-foreground" />
-                  <span>{driver.phone}</span>
-                </div>
-                <div className="flex items-center gap-2 text-sm">
-                  <Shield className="h-4 w-4 text-muted-foreground" />
-                  <span>{driver.license} • Expires {new Date(driver.licenseExpiry).toLocaleDateString()}</span>
-                </div>
-              </div>
 
-              <div className="mt-4 pt-4 border-t border-border">
-                <p className="text-sm text-muted-foreground">
-                  <span className="font-medium text-foreground">{driver.completedJobs}</span> completed jobs
-                </p>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
+                <div className="mt-4 pt-4 border-t border-border">
+                  <p className="text-sm text-muted-foreground">
+                    <span className="font-medium text-foreground">{driver.completedJobs}</span> completed jobs
+                  </p>
+                </div>
+              </CardContent>
+            </Card>
+          ))
+        )}
       </div>
 
       {/* Add/Edit Dialog */}
@@ -268,33 +296,40 @@ const DriversManagement = () => {
           <div className="space-y-4">
             <div className="space-y-2">
               <Label>Full Name *</Label>
-              <Input 
+              <Input
                 value={formData.name}
                 onChange={(e) => setFormData({ ...formData, name: e.target.value })}
                 placeholder="John Smith"
+                disabled={submitting}
               />
             </div>
             <div className="space-y-2">
               <Label>Email *</Label>
-              <Input 
+              <Input
                 type="email"
                 value={formData.email}
                 onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                 placeholder="john@email.com"
+                disabled={submitting}
               />
             </div>
             <div className="space-y-2">
               <Label>Phone *</Label>
-              <Input 
+              <Input
                 value={formData.phone}
                 onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                 placeholder="(555) 123-4567"
+                disabled={submitting}
               />
             </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>License Type</Label>
-                <Select value={formData.license} onValueChange={(val) => setFormData({ ...formData, license: val })}>
+                <Select
+                  value={formData.license}
+                  onValueChange={(val) => setFormData({ ...formData, license: val })}
+                  disabled={submitting}
+                >
                   <SelectTrigger>
                     <SelectValue />
                   </SelectTrigger>
@@ -307,29 +342,40 @@ const DriversManagement = () => {
               </div>
               <div className="space-y-2">
                 <Label>License Expiry</Label>
-                <Input 
+                <Input
                   type="date"
                   value={formData.licenseExpiry}
                   onChange={(e) => setFormData({ ...formData, licenseExpiry: e.target.value })}
+                  disabled={submitting}
                 />
               </div>
             </div>
             {!editingDriver && (
               <div className="space-y-2">
                 <Label>Initial Password *</Label>
-                <Input 
+                <Input
                   type="password"
                   value={formData.password}
                   onChange={(e) => setFormData({ ...formData, password: e.target.value })}
                   placeholder="Create login password"
+                  disabled={submitting}
                 />
                 <p className="text-xs text-muted-foreground">Driver will use this to log into the app</p>
               </div>
             )}
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
-            <Button onClick={handleSave}>{editingDriver ? 'Save Changes' : 'Add Driver'}</Button>
+            <Button variant="outline" onClick={() => setDialogOpen(false)} disabled={submitting}>Cancel</Button>
+            <Button onClick={handleSave} disabled={submitting}>
+              {submitting ? (
+                <>
+                  <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                  {editingDriver ? 'Saving...' : 'Adding...'}
+                </>
+              ) : (
+                editingDriver ? 'Save Changes' : 'Add Driver'
+              )}
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

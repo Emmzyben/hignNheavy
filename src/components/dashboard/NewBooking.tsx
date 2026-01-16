@@ -3,7 +3,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { toast } from "sonner";
-import { ArrowRight, ArrowLeft, Check } from "lucide-react";
+import { ArrowRight, ArrowLeft, Check, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -23,6 +23,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
+import api from "@/lib/api";
 
 const formSchema = z.object({
   // Step 1: Locations
@@ -53,41 +54,85 @@ const steps = [
   { title: "Review", description: "Confirm Details" },
 ];
 
-const NewBooking = () => {
+interface NewBookingProps {
+  initialData?: any;
+  onSuccess?: () => void;
+  onCancel?: () => void;
+}
+
+const NewBooking = ({ initialData, onSuccess, onCancel }: NewBookingProps) => {
   const [currentStep, setCurrentStep] = useState(0);
+  const [isLoading, setIsLoading] = useState(false);
 
   const form = useForm<z.infer<typeof formSchema>>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      pickupAddress: "",
-      pickupCity: "",
-      pickupState: "",
-      deliveryAddress: "",
-      deliveryCity: "",
-      deliveryState: "",
-      cargoType: "",
-      cargoDescription: "",
-      length: "",
-      width: "",
-      height: "",
-      weight: "",
-      shipmentDate: "",
-      flexibleDates: false,
-      requiresEscort: false,
-      specialInstructions: "",
+      pickupAddress: initialData?.pickup_address || "",
+      pickupCity: initialData?.pickup_city || "",
+      pickupState: initialData?.pickup_state || "",
+      deliveryAddress: initialData?.delivery_address || "",
+      deliveryCity: initialData?.delivery_city || "",
+      deliveryState: initialData?.delivery_state || "",
+      cargoType: initialData?.cargo_type || "",
+      cargoDescription: initialData?.cargo_description || "",
+      length: initialData?.dimensions_length_ft?.toString() || "",
+      width: initialData?.dimensions_width_ft?.toString() || "",
+      height: initialData?.dimensions_height_ft?.toString() || "",
+      weight: initialData?.weight_lbs?.toString() || "",
+      shipmentDate: initialData?.shipment_date ? new Date(initialData.shipment_date).toISOString().split('T')[0] : "",
+      flexibleDates: !!initialData?.flexible_dates,
+      requiresEscort: !!initialData?.requires_escort,
+      specialInstructions: initialData?.special_instructions || "",
     },
   });
 
-  const onSubmit = (data: z.infer<typeof formSchema>) => {
-    console.log(data);
-    toast.success("Booking request submitted successfully!", {
-      description: "We'll send you a quote within 24 hours.",
-    });
+  const onSubmit = async (data: z.infer<typeof formSchema>) => {
+    setIsLoading(true);
+    try {
+      const isEditing = !!initialData?.id;
+      const response = isEditing
+        ? await api.put(`/bookings/${initialData.id}`, data)
+        : await api.post("/bookings", data);
+
+      if (response.data.success) {
+        toast.success(isEditing ? "Booking updated successfully!" : "Booking request submitted successfully!", {
+          description: isEditing ? "Your changes have been saved." : "We'll send you a quote within 24 hours.",
+        });
+
+        if (onSuccess) {
+          onSuccess();
+        } else {
+          form.reset();
+          setCurrentStep(0);
+        }
+      }
+    } catch (error: any) {
+      console.error("Booking submission error:", error);
+      toast.error(error.response?.data?.message || `Failed to ${initialData?.id ? 'update' : 'submit'} booking request. Please try again.`);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
-  const nextStep = () => {
-    if (currentStep < steps.length - 1) {
+  const nextStep = async () => {
+    const fields = getStepFields(currentStep);
+    const isValid = await form.trigger(fields as any);
+
+    if (isValid && currentStep < steps.length - 1) {
       setCurrentStep(currentStep + 1);
+    }
+  };
+
+  const getStepFields = (step: number) => {
+    switch (step) {
+      case 0:
+        return ["pickupAddress", "pickupCity", "pickupState", "deliveryAddress", "deliveryCity", "deliveryState"];
+      case 1:
+        return ["cargoType", "cargoDescription", "length", "width", "height", "weight"];
+      case 2:
+        return ["shipmentDate", "flexibleDates", "requiresEscort", "specialInstructions"];
+      default:
+        return [];
     }
   };
 
@@ -108,13 +153,12 @@ const NewBooking = () => {
             <div key={index} className="flex items-center">
               <div className="flex flex-col items-center">
                 <div
-                  className={`w-10 h-10 rounded-full flex items-center justify-center font-semibold transition-colors ${
-                    index < currentStep
-                      ? "bg-primary text-primary-foreground"
-                      : index === currentStep
+                  className={`w-10 h-10 rounded-full flex items-center justify-center font-semibold transition-colors ${index < currentStep
+                    ? "bg-primary text-primary-foreground"
+                    : index === currentStep
                       ? "bg-primary text-primary-foreground"
                       : "bg-muted text-muted-foreground"
-                  }`}
+                    }`}
                 >
                   {index < currentStep ? <Check size={20} /> : index + 1}
                 </div>
@@ -125,9 +169,8 @@ const NewBooking = () => {
               </div>
               {index < steps.length - 1 && (
                 <div
-                  className={`w-20 md:w-32 h-1 mx-2 ${
-                    index < currentStep ? "bg-primary" : "bg-muted"
-                  }`}
+                  className={`w-20 md:w-32 h-1 mx-2 ${index < currentStep ? "bg-primary" : "bg-muted"
+                    }`}
                 />
               )}
             </div>
@@ -290,10 +333,10 @@ const NewBooking = () => {
                       <FormItem className="md:col-span-2">
                         <FormLabel>Cargo Description</FormLabel>
                         <FormControl>
-                          <Textarea 
+                          <Textarea
                             placeholder="Describe your cargo in detail..."
                             className="min-h-[100px]"
-                            {...field} 
+                            {...field}
                           />
                         </FormControl>
                         <FormMessage />
@@ -422,10 +465,10 @@ const NewBooking = () => {
                     <FormItem>
                       <FormLabel>Special Instructions (Optional)</FormLabel>
                       <FormControl>
-                        <Textarea 
+                        <Textarea
                           placeholder="Any special handling requirements, access restrictions, etc..."
                           className="min-h-[100px]"
-                          {...field} 
+                          {...field}
                         />
                       </FormControl>
                       <FormMessage />
@@ -439,7 +482,7 @@ const NewBooking = () => {
             {currentStep === 3 && (
               <div className="space-y-6">
                 <h2 className="text-xl font-display font-bold">Review Your Booking</h2>
-                
+
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                   <div className="bg-muted/50 p-4 rounded-lg">
                     <h3 className="font-semibold mb-3">Pickup Location</h3>
@@ -474,7 +517,7 @@ const NewBooking = () => {
 
                 <div className="bg-primary/10 border border-primary/20 p-4 rounded-lg">
                   <p className="text-sm">
-                    By submitting this request, you'll receive a detailed quote within 24 hours. 
+                    By submitting this request, you'll receive a detailed quote within 24 hours.
                     The quote will include transport costs, permit fees, and escort services if required.
                   </p>
                 </div>
@@ -483,25 +526,41 @@ const NewBooking = () => {
 
             {/* Navigation Buttons */}
             <div className="flex justify-between pt-6 border-t border-border">
-              <Button
-                type="button"
-                variant="outline"
-                onClick={prevStep}
-                disabled={currentStep === 0}
-              >
-                <ArrowLeft size={18} className="mr-2" />
-                Previous
-              </Button>
-              
+              <div className="flex gap-2">
+                {onCancel && (
+                  <Button type="button" variant="ghost" onClick={onCancel}>
+                    Cancel
+                  </Button>
+                )}
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={prevStep}
+                  disabled={currentStep === 0}
+                >
+                  <ArrowLeft size={18} className="mr-2" />
+                  Previous
+                </Button>
+              </div>
+
               {currentStep < steps.length - 1 ? (
                 <Button type="button" onClick={nextStep}>
                   Next
                   <ArrowRight size={18} className="ml-2" />
                 </Button>
               ) : (
-                <Button type="submit">
-                  Submit Booking Request
-                  <Check size={18} className="ml-2" />
+                <Button type="submit" disabled={isLoading}>
+                  {isLoading ? (
+                    <>
+                      <Loader2 size={18} className="mr-2 animate-spin" />
+                      Submitting...
+                    </>
+                  ) : (
+                    <>
+                      Submit Booking Request
+                      <Check size={18} className="ml-2" />
+                    </>
+                  )}
                 </Button>
               )}
             </div>

@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { MapPin, Calendar, Package, DollarSign, User, Send, FileText } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { MapPin, Calendar, Package, DollarSign, User, Send, FileText, Loader2, CheckCircle2, Clock } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -9,304 +9,326 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
+import api from '@/lib/api';
 
-const mockRequests = [
-  {
-    id: 'REQ-001',
-    shipper: 'ABC Construction',
-    pickup: 'Houston, TX',
-    delivery: 'Dallas, TX',
-    date: '2024-01-20',
-    cargo: 'Excavator CAT 320',
-    dimensions: '32ft x 10ft x 11ft',
-    weight: '52,000 lbs',
-    permits: ['Oversize', 'Overweight'],
-    escortRequired: true,
-    status: 'open',
-  },
-  {
-    id: 'REQ-002',
-    shipper: 'Steel Works Inc',
-    pickup: 'San Antonio, TX',
-    delivery: 'Austin, TX',
-    date: '2024-01-22',
-    cargo: 'Steel Beams (Bundle)',
-    dimensions: '60ft x 8ft x 4ft',
-    weight: '45,000 lbs',
-    permits: ['Oversize'],
-    escortRequired: false,
-    status: 'open',
-  },
-  {
-    id: 'REQ-003',
-    shipper: 'Energy Solutions',
-    pickup: 'Midland, TX',
-    delivery: 'Corpus Christi, TX',
-    date: '2024-01-25',
-    cargo: 'Wind Turbine Blade',
-    dimensions: '180ft x 12ft x 10ft',
-    weight: '28,000 lbs',
-    permits: ['Superload', 'Oversize'],
-    escortRequired: true,
-    status: 'open',
-  },
-];
-
-const mockDrivers = [
-  { id: 'D1', name: 'John Smith', status: 'available' },
-  { id: 'D2', name: 'Mike Johnson', status: 'available' },
-  { id: 'D3', name: 'Robert Davis', status: 'on-job' },
-];
-
-const mockEquipment = [
-  { id: 'E1', name: 'Peterbilt 389 + Lowboy Trailer', capacity: '100,000 lbs' },
-  { id: 'E2', name: 'Kenworth W900 + RGN Trailer', capacity: '120,000 lbs' },
-  { id: 'E3', name: 'Freightliner + Step Deck', capacity: '80,000 lbs' },
-];
+type BookingTab = 'available' | 'my-quotes' | 'won-jobs';
 
 const AvailableBookings = () => {
-  const [requests, setRequests] = useState(mockRequests);
-  const [selectedRequest, setSelectedRequest] = useState<typeof mockRequests[0] | null>(null);
+  const [activeTab, setActiveTab] = useState<BookingTab>('available');
+  const [bookings, setBookings] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [drivers, setDrivers] = useState<any[]>([]);
+  const [vehicles, setVehicles] = useState<any[]>([]);
+
+  const [selectedBooking, setSelectedBooking] = useState<any | null>(null);
   const [quoteDialogOpen, setQuoteDialogOpen] = useState(false);
   const [selectedDriver, setSelectedDriver] = useState('');
   const [selectedEquipment, setSelectedEquipment] = useState('');
   const [quotePrice, setQuotePrice] = useState('');
   const [quoteNotes, setQuoteNotes] = useState('');
-  const [submittedQuotes, setSubmittedQuotes] = useState<string[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  const handleSubmitQuote = () => {
+  useEffect(() => {
+    fetchBookings();
+  }, [activeTab]);
+
+  useEffect(() => {
+    fetchResources();
+  }, []);
+
+  const fetchBookings = async () => {
+    setLoading(true);
+    try {
+      let endpoint = '';
+      switch (activeTab) {
+        case 'available': endpoint = '/quotes/available'; break;
+        case 'my-quotes': endpoint = '/quotes/my-quotes'; break;
+        case 'won-jobs': endpoint = '/quotes/won-jobs'; break;
+      }
+      const response = await api.get(endpoint);
+      if (response.data.success) {
+        setBookings(response.data.data);
+      }
+    } catch (error) {
+      toast.error('Failed to load bookings');
+      console.error(error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchResources = async () => {
+    try {
+      const [driversRes, vehiclesRes] = await Promise.all([
+        api.get('/drivers'),
+        api.get('/vehicles')
+      ]);
+      if (driversRes.data.success) setDrivers(driversRes.data.data);
+      if (vehiclesRes.data.success) setVehicles(vehiclesRes.data.data);
+    } catch (error) {
+      console.error('Error fetching resources:', error);
+    }
+  };
+
+  const handleSubmitQuote = async () => {
     if (!quotePrice) {
       toast.error('Please enter your quote price');
       return;
     }
-    if (!selectedDriver) {
-      toast.error('Please select a driver');
-      return;
+
+    setIsSubmitting(true);
+    try {
+      const response = await api.post('/quotes', {
+        booking_id: selectedBooking.id,
+        amount: quotePrice,
+        driver_id: selectedDriver,
+        vehicle_id: selectedEquipment,
+        notes: quoteNotes
+      });
+
+      if (response.data.success) {
+        toast.success(`Quote submitted for ${selectedBooking.id.split('-')[0]}. Admin will review and match.`);
+        setQuoteDialogOpen(false);
+        fetchBookings(); // Refresh list
+        resetQuoteForm();
+      }
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Failed to submit quote');
+    } finally {
+      setIsSubmitting(false);
     }
-    if (!selectedEquipment) {
-      toast.error('Please select equipment');
-      return;
-    }
-    
-    setSubmittedQuotes([...submittedQuotes, selectedRequest?.id || '']);
-    toast.success(`Quote submitted for ${selectedRequest?.id}. Admin will review and match.`);
-    setQuoteDialogOpen(false);
-    setSelectedRequest(null);
+  };
+
+  const resetQuoteForm = () => {
+    setSelectedBooking(null);
     setSelectedDriver('');
     setSelectedEquipment('');
     setQuotePrice('');
     setQuoteNotes('');
   };
 
-  const hasSubmittedQuote = (requestId: string) => submittedQuotes.includes(requestId);
+  const getStatusBadge = (status: string) => {
+    switch (status) {
+      case 'pending': return <Badge className="bg-yellow-500/20 text-yellow-600 border-0"><Clock size={12} className="mr-1" /> Pending</Badge>;
+      case 'accepted': return <Badge className="bg-green-500/20 text-green-600 border-0"><CheckCircle2 size={12} className="mr-1" /> Accepted</Badge>;
+      case 'rejected': return <Badge className="bg-red-500/20 text-red-600 border-0">Rejected</Badge>;
+      case 'expired': return <Badge variant="outline">Expired</Badge>;
+      default: return <Badge variant="outline">{status}</Badge>;
+    }
+  };
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-display font-bold">Available Requests</h1>
-        <p className="text-muted-foreground">View shipment requests in your area and submit quotes</p>
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-display font-bold">Carrier Load Board</h1>
+          <p className="text-muted-foreground">Find work and manage your active bids</p>
+        </div>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-primary/20 rounded-lg">
-                <Package className="h-6 w-6 text-primary" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{requests.length}</p>
-                <p className="text-sm text-muted-foreground">Open Requests</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-accent/20 rounded-lg">
-                <FileText className="h-6 w-6 text-accent" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{submittedQuotes.length}</p>
-                <p className="text-sm text-muted-foreground">Quotes Submitted</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardContent className="p-6">
-            <div className="flex items-center gap-4">
-              <div className="p-3 bg-blue-500/20 rounded-lg">
-                <User className="h-6 w-6 text-blue-500" />
-              </div>
-              <div>
-                <p className="text-2xl font-bold">{mockDrivers.filter(d => d.status === 'available').length}</p>
-                <p className="text-sm text-muted-foreground">Available Drivers</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+      {/* Filter Tabs */}
+      <div className="flex gap-2 p-1 bg-muted rounded-lg w-fit">
+        <Button
+          variant={activeTab === 'available' ? 'secondary' : 'ghost'}
+          size="sm"
+          onClick={() => setActiveTab('available')}
+          className={activeTab === 'available' ? 'bg-primary text-white shadow-sm' : ''}
+        >
+          Available Loads
+        </Button>
+        <Button
+          variant={activeTab === 'my-quotes' ? 'secondary' : 'ghost'}
+          size="sm"
+          onClick={() => setActiveTab('my-quotes')}
+          className={activeTab === 'my-quotes' ? 'bg-primary text-white shadow-sm' : ''}
+        >
+          My Quotes
+        </Button>
+        <Button
+          variant={activeTab === 'won-jobs' ? 'secondary' : 'ghost'}
+          size="sm"
+          onClick={() => setActiveTab('won-jobs')}
+          className={activeTab === 'won-jobs' ? 'bg-primary text-white shadow-sm' : ''}
+        >
+          Won Jobs
+        </Button>
       </div>
 
-      {/* Requests List */}
+      {/* Bookings List */}
       <div className="space-y-4">
-        {requests.map((request) => (
-          <Card key={request.id} className="hover:border-primary/50 transition-colors">
-            <CardContent className="p-6">
-              <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4">
-                <div className="space-y-4 flex-1">
-                  <div className="flex items-center gap-3">
-                    <Badge variant="outline">{request.id}</Badge>
-                    <span className="text-sm text-muted-foreground">from {request.shipper}</span>
-                    {request.escortRequired && (
-                      <Badge className="bg-accent text-accent-foreground">Escort Required</Badge>
-                    )}
-                    {hasSubmittedQuote(request.id) && (
-                      <Badge className="bg-green-500/20 text-green-600">Quote Submitted</Badge>
-                    )}
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div className="flex items-start gap-2">
-                      <MapPin className="h-5 w-5 text-primary mt-0.5" />
-                      <div>
-                        <p className="text-sm text-muted-foreground">Route</p>
-                        <p className="font-medium">{request.pickup} → {request.delivery}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-start gap-2">
-                      <Calendar className="h-5 w-5 text-primary mt-0.5" />
-                      <div>
-                        <p className="text-sm text-muted-foreground">Requested Date</p>
-                        <p className="font-medium">{new Date(request.date).toLocaleDateString()}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-start gap-2">
-                      <Package className="h-5 w-5 text-primary mt-0.5" />
-                      <div>
-                        <p className="text-sm text-muted-foreground">Cargo</p>
-                        <p className="font-medium">{request.cargo}</p>
-                        <p className="text-sm text-muted-foreground">{request.dimensions} • {request.weight}</p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="flex flex-wrap gap-2">
-                    {request.permits.map((permit) => (
-                      <Badge key={permit} variant="secondary">{permit} Permit</Badge>
-                    ))}
-                  </div>
-                </div>
-
-                <div className="flex flex-row lg:flex-col gap-2">
-                  <Button 
-                    className="flex-1 lg:flex-none"
-                    disabled={hasSubmittedQuote(request.id)}
-                    onClick={() => {
-                      setSelectedRequest(request);
-                      setQuoteDialogOpen(true);
-                    }}
-                  >
-                    <Send className="h-4 w-4 mr-2" />
-                    {hasSubmittedQuote(request.id) ? 'Quote Sent' : 'Submit Quote'}
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-
-        {requests.length === 0 && (
+        {loading ? (
+          <div className="flex flex-col items-center justify-center py-12">
+            <Loader2 className="h-8 w-8 animate-spin text-primary mb-2" />
+            <p className="text-muted-foreground">Fetching records...</p>
+          </div>
+        ) : bookings.length === 0 ? (
           <Card>
             <CardContent className="p-12 text-center">
-              <Package className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-              <p className="text-lg font-medium">No open requests</p>
-              <p className="text-muted-foreground">Check back later for new shipment requests in your area</p>
+              <Package className="h-12 w-12 mx-auto text-muted-foreground mb-4 opacity-20" />
+              <p className="text-lg font-medium">No results found</p>
+              <p className="text-muted-foreground">
+                {activeTab === 'available' ? 'Check back later for new loads.' :
+                  activeTab === 'my-quotes' ? "You haven't submitted any quotes yet." :
+                    "You don't have any assigned jobs yet."}
+              </p>
             </CardContent>
           </Card>
+        ) : (
+          bookings.map((booking) => (
+            <Card key={booking.id} className="hover:border-primary/50 transition-colors">
+              <CardContent className="p-6">
+                <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4">
+                  <div className="space-y-4 flex-1">
+                    <div className="flex items-center gap-3">
+                      <Badge variant="outline" className="font-mono">{booking.id.split('-')[0]}...</Badge>
+                      <span className="text-sm text-muted-foreground">Shipper: {booking.shipper_name}</span>
+                      {booking.requires_escort === 1 && (
+                        <Badge className="bg-orange-500/10 text-orange-600 border-0">Escort Required</Badge>
+                      )}
+                      {activeTab === 'my-quotes' && getStatusBadge(booking.quote_status)}
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                      <div className="flex items-start gap-2">
+                        <MapPin className="h-5 w-5 text-primary mt-0.5 shrink-0" />
+                        <div>
+                          <p className="text-xs text-muted-foreground uppercase font-bold tracking-wider">Route</p>
+                          <p className="font-medium">{booking.pickup_city}, {booking.pickup_state}</p>
+                          <p className="text-sm text-muted-foreground">to {booking.delivery_city}, {booking.delivery_state}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-start gap-2">
+                        <Calendar className="h-5 w-5 text-primary mt-0.5 shrink-0" />
+                        <div>
+                          <p className="text-xs text-muted-foreground uppercase font-bold tracking-wider">Requested Date</p>
+                          <p className="font-medium">{new Date(booking.shipment_date).toLocaleDateString()}</p>
+                        </div>
+                      </div>
+                      <div className="flex items-start gap-2">
+                        <Package className="h-5 w-5 text-primary mt-0.5 shrink-0" />
+                        <div>
+                          <p className="text-xs text-muted-foreground uppercase font-bold tracking-wider">Cargo</p>
+                          <p className="font-medium">{booking.cargo_type}</p>
+                          <p className="text-sm text-muted-foreground">
+                            {booking.dimensions_length_ft}x{booking.dimensions_width_ft}x{booking.dimensions_height_ft}ft • {Number(booking.weight_lbs).toLocaleString()} lbs
+                          </p>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-row lg:flex-col gap-2 shrink-0">
+                    {activeTab === 'available' ? (
+                      <Button
+                        onClick={() => {
+                          setSelectedBooking(booking);
+                          setQuoteDialogOpen(true);
+                        }}
+                      >
+                        <Send className="h-4 w-4 mr-2" />
+                        Submit Quote
+                      </Button>
+                    ) : activeTab === 'my-quotes' ? (
+                      <div className="text-right">
+                        <p className="text-xs text-muted-foreground font-bold uppercase">Your Bid</p>
+                        <p className="text-xl font-bold text-primary">${Number(booking.amount).toLocaleString()}</p>
+                      </div>
+                    ) : (
+                      <div className="text-right">
+                        <p className="text-xs text-muted-foreground font-bold uppercase">Accepted Price</p>
+                        <p className="text-xl font-bold text-green-600">${Number(booking.agreed_price).toLocaleString()}</p>
+                        <Badge variant="outline" className="mt-1 bg-green-50 text-green-700 border-green-200">Booked</Badge>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))
         )}
       </div>
 
       {/* Submit Quote Dialog */}
-      <Dialog open={quoteDialogOpen} onOpenChange={setQuoteDialogOpen}>
+      <Dialog open={quoteDialogOpen} onOpenChange={(open) => {
+        setQuoteDialogOpen(open);
+        if (!open) resetQuoteForm();
+      }}>
         <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>Submit Quote for {selectedRequest?.id}</DialogTitle>
+            <DialogTitle>Submit Bid for Load {selectedBooking?.id.split('-')[0]}</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            <div className="p-4 bg-muted/50 rounded-lg space-y-2">
-              <p className="text-sm"><strong>Route:</strong> {selectedRequest?.pickup} → {selectedRequest?.delivery}</p>
-              <p className="text-sm"><strong>Cargo:</strong> {selectedRequest?.cargo}</p>
-              <p className="text-sm"><strong>Dimensions:</strong> {selectedRequest?.dimensions}</p>
-              <p className="text-sm"><strong>Weight:</strong> {selectedRequest?.weight}</p>
+            <div className="p-4 bg-muted/50 rounded-lg space-y-2 border">
+              <p className="text-sm flex justify-between"><span><strong>Route:</strong></span> <span>{selectedBooking?.pickup_city} → {selectedBooking?.delivery_city}</span></p>
+              <p className="text-sm flex justify-between"><span><strong>Cargo:</strong></span> <span>{selectedBooking?.cargo_type}</span></p>
+              <p className="text-sm flex justify-between"><span><strong>Weight:</strong></span> <span>{Number(selectedBooking?.weight_lbs).toLocaleString()} lbs</span></p>
             </div>
-            
+
             <div className="space-y-2">
-              <Label>Your Quote Price ($)</Label>
+              <Label>Your Quote Price (Total Service Fee)</Label>
               <div className="relative">
                 <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input 
+                <Input
                   type="number"
-                  placeholder="Enter your price"
+                  placeholder="0.00"
                   value={quotePrice}
                   onChange={(e) => setQuotePrice(e.target.value)}
-                  className="pl-9"
+                  className="pl-9 h-12 text-lg font-semibold"
                 />
               </div>
             </div>
 
-            <div className="space-y-2">
-              <Label>Assign Driver</Label>
-              <Select value={selectedDriver} onValueChange={setSelectedDriver}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Choose a driver" />
-                </SelectTrigger>
-                <SelectContent>
-                  {mockDrivers.filter(d => d.status === 'available').map((driver) => (
-                    <SelectItem key={driver.id} value={driver.id}>
-                      {driver.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Assign Driver</Label>
+                <Select value={selectedDriver} onValueChange={setSelectedDriver}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select driver" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {drivers.filter(d => d.status === 'available').length === 0 ? (
+                      <SelectItem value="none" disabled>No available drivers</SelectItem>
+                    ) : (
+                      drivers.filter(d => d.status === 'available').map((driver) => (
+                        <SelectItem key={driver.id} value={driver.id}>{driver.name}</SelectItem>
+                      ))
+                    )}
+                  </SelectContent>
+                </Select>
+              </div>
 
-            <div className="space-y-2">
-              <Label>Select Equipment</Label>
-              <Select value={selectedEquipment} onValueChange={setSelectedEquipment}>
-                <SelectTrigger>
-                  <SelectValue placeholder="Choose equipment" />
-                </SelectTrigger>
-                <SelectContent>
-                  {mockEquipment.map((eq) => (
-                    <SelectItem key={eq.id} value={eq.id}>
-                      {eq.name} ({eq.capacity})
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              <div className="space-y-2">
+                <Label>Select Vehicle</Label>
+                <Select value={selectedEquipment} onValueChange={setSelectedEquipment}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select vehicle" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {vehicles.filter(v => v.status === 'available').length === 0 ? (
+                      <SelectItem value="none" disabled>No available vehicles</SelectItem>
+                    ) : (
+                      vehicles.filter(v => v.status === 'available').map((v) => (
+                        <SelectItem key={v.id} value={v.id}>{v.name} ({v.type})</SelectItem>
+                      ))
+                    )}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
 
             <div className="space-y-2">
               <Label>Additional Notes (Optional)</Label>
-              <Textarea 
-                placeholder="Any special notes about your quote..."
+              <Textarea
+                placeholder="Escort status, insurance coverage, or special terms..."
                 value={quoteNotes}
                 onChange={(e) => setQuoteNotes(e.target.value)}
               />
             </div>
-
-            <p className="text-sm text-muted-foreground">
-              Your quote will be sent to the HighnHeavy admin for review. If selected, you'll be matched with the shipper.
-            </p>
           </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setQuoteDialogOpen(false)}>Cancel</Button>
-            <Button onClick={handleSubmitQuote}>
-              <Send className="h-4 w-4 mr-2" />
-              Submit Quote
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={() => setQuoteDialogOpen(false)} disabled={isSubmitting}>Cancel</Button>
+            <Button onClick={handleSubmitQuote} disabled={isSubmitting}>
+              {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Submitting...</> : <><Send className="h-4 w-4 mr-2" /> Submit Quote</>}
             </Button>
           </DialogFooter>
         </DialogContent>
