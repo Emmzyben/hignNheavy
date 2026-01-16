@@ -22,6 +22,7 @@ const AvailableBookings = () => {
 
   const [selectedBooking, setSelectedBooking] = useState<any | null>(null);
   const [quoteDialogOpen, setQuoteDialogOpen] = useState(false);
+  const [detailsDialogOpen, setDetailsDialogOpen] = useState(false);
   const [selectedDriver, setSelectedDriver] = useState('');
   const [selectedEquipment, setSelectedEquipment] = useState('');
   const [quotePrice, setQuotePrice] = useState('');
@@ -107,6 +108,16 @@ const AvailableBookings = () => {
     setQuoteNotes('');
   };
 
+  const openQuoteDialog = (booking: any) => {
+    setSelectedBooking(booking);
+    setQuoteDialogOpen(true);
+  };
+
+  const openDetailsDialog = (booking: any) => {
+    setSelectedBooking(booking);
+    setDetailsDialogOpen(true);
+  };
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'pending': return <Badge className="bg-yellow-500/20 text-yellow-600 border-0"><Clock size={12} className="mr-1" /> Pending</Badge>;
@@ -175,7 +186,7 @@ const AvailableBookings = () => {
           </Card>
         ) : (
           bookings.map((booking) => (
-            <Card key={booking.id} className="hover:border-primary/50 transition-colors">
+            <Card key={booking.id} className="hover:border-primary/50 transition-colors border shadow-sm">
               <CardContent className="p-6">
                 <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4">
                   <div className="space-y-4 flex-1">
@@ -218,15 +229,16 @@ const AvailableBookings = () => {
                   </div>
 
                   <div className="flex flex-row lg:flex-col gap-2 shrink-0">
+                    <Button variant="ghost" onClick={() => openDetailsDialog(booking)}>
+                      <FileText className="h-4 w-4 mr-2" />
+                      Details
+                    </Button>
                     {activeTab === 'available' ? (
                       <Button
-                        onClick={() => {
-                          setSelectedBooking(booking);
-                          setQuoteDialogOpen(true);
-                        }}
+                        onClick={() => openQuoteDialog(booking)}
                       >
                         <Send className="h-4 w-4 mr-2" />
-                        Submit Quote
+                        Quote
                       </Button>
                     ) : activeTab === 'my-quotes' ? (
                       <div className="text-right">
@@ -247,6 +259,102 @@ const AvailableBookings = () => {
           ))
         )}
       </div>
+
+      {/* Booking Details Dialog */}
+      <Dialog open={detailsDialogOpen} onOpenChange={setDetailsDialogOpen}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Shipment Details - {selectedBooking?.id.split('-')[0]}</DialogTitle>
+          </DialogHeader>
+          {selectedBooking && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-4">
+              <div className="space-y-4">
+                <div>
+                  <h4 className="text-sm font-bold text-muted-foreground uppercase mb-2">Location Details</h4>
+                  <div className="space-y-3">
+                    <div className="flex gap-2">
+                      <MapPin className="h-4 w-4 text-primary shrink-0 mt-1" />
+                      <div>
+                        <p className="text-xs text-muted-foreground">Pickup Address</p>
+                        <p className="text-sm font-medium">{selectedBooking.pickup_address}</p>
+                        <p className="text-sm text-muted-foreground">{selectedBooking.pickup_city}, {selectedBooking.pickup_state} {selectedBooking.pickup_zip}</p>
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <MapPin className="h-4 w-4 text-green-600 shrink-0 mt-1" />
+                      <div>
+                        <p className="text-xs text-muted-foreground">Delivery Address</p>
+                        <p className="text-sm font-medium">{selectedBooking.delivery_address}</p>
+                        <p className="text-sm text-muted-foreground">{selectedBooking.delivery_city}, {selectedBooking.delivery_state} {selectedBooking.delivery_zip}</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <h4 className="text-sm font-bold text-muted-foreground uppercase mb-2">Schedule & Requirements</h4>
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Shipment Date:</span>
+                      <span className="font-medium">{new Date(selectedBooking.shipment_date).toLocaleDateString()}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Escort Required:</span>
+                      <span className="font-medium">{selectedBooking.requires_escort === 1 ? 'Yes' : 'No'}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <h4 className="text-sm font-bold text-muted-foreground uppercase mb-2">Cargo Information</h4>
+                  <div className="space-y-2 p-3 bg-muted/30 rounded-lg border">
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Type:</span>
+                      <span className="font-bold">{selectedBooking.cargo_type}</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Weight:</span>
+                      <span className="font-medium">{Number(selectedBooking.weight_lbs).toLocaleString()} lbs</span>
+                    </div>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-muted-foreground">Dimensions:</span>
+                      <span className="font-medium">{selectedBooking.dimensions_length_ft}L x {selectedBooking.dimensions_width_ft}W x {selectedBooking.dimensions_height_ft}H ft</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <h4 className="text-sm font-bold text-muted-foreground uppercase mb-2">Special Instructions</h4>
+                  <p className="text-sm p-3 bg-yellow-50/50 rounded-lg border border-yellow-100 text-muted-foreground italic">
+                    {selectedBooking.special_instructions || 'No special instructions provided by shipper.'}
+                  </p>
+                </div>
+
+                <div>
+                  <h4 className="text-sm font-bold text-muted-foreground uppercase mb-2">Shipper Contacts</h4>
+                  <div className="flex items-center gap-2">
+                    <User className="h-4 w-4 text-muted-foreground" />
+                    <span className="text-sm font-medium">{selectedBooking.shipper_name}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDetailsDialogOpen(false)}>Close</Button>
+            {activeTab === 'available' && (
+              <Button onClick={() => {
+                setDetailsDialogOpen(false);
+                openQuoteDialog(selectedBooking);
+              }}>
+                Proceed to Quote
+              </Button>
+            )}
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Submit Quote Dialog */}
       <Dialog open={quoteDialogOpen} onOpenChange={(open) => {
