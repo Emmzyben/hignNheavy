@@ -6,7 +6,9 @@ interface User {
     email: string;
     full_name: string;
     role: 'shipper' | 'carrier' | 'escort' | 'admin' | 'driver';
+    status?: 'active' | 'disabled';
     profile_completed?: boolean;
+    email_verified?: boolean;
 }
 
 interface AuthContextType {
@@ -17,6 +19,7 @@ interface AuthContextType {
     register: (userData: RegisterData) => Promise<void>;
     logout: () => void;
     updateProfileStatus: (status: boolean) => void;
+    refreshUser: () => Promise<void>;
     isAuthenticated: boolean;
 }
 
@@ -35,16 +38,37 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
     const [token, setToken] = useState<string | null>(null);
     const [loading, setLoading] = useState(true);
 
-    // Load user from localStorage on mount
+    // Load user from localStorage on mount and verify with backend
     useEffect(() => {
         const storedToken = localStorage.getItem('token');
         const storedUser = localStorage.getItem('user');
 
-        if (storedToken && storedUser) {
-            setToken(storedToken);
-            setUser(JSON.parse(storedUser));
-        }
-        setLoading(false);
+        const validateSession = async () => {
+            if (storedToken) {
+                setToken(storedToken);
+                // Optimistically set user from storage first
+                if (storedUser) {
+                    setUser(JSON.parse(storedUser));
+                }
+
+                try {
+                    // Fetch fresh profile
+                    const response = await api.get('/users/me');
+                    if (response.data.success) {
+                        const freshUser = response.data.data;
+                        setUser(freshUser);
+                        localStorage.setItem('user', JSON.stringify(freshUser));
+                    }
+                } catch (error) {
+                    // If token is invalid/expired, logout
+                    console.error("Session validation failed", error);
+                    // logout(); // Optional: decide if we want to logout on network error or just keep stale
+                }
+            }
+            setLoading(false);
+        };
+
+        validateSession();
     }, []);
 
     const login = async (email: string, password: string) => {
@@ -100,6 +124,21 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         localStorage.removeItem('user');
     };
 
+    const refreshUser = async () => {
+        if (token) {
+            try {
+                const response = await api.get('/users/me');
+                if (response.data.success) {
+                    const freshUser = response.data.data;
+                    setUser(freshUser);
+                    localStorage.setItem('user', JSON.stringify(freshUser));
+                }
+            } catch (error) {
+                console.error("Failed to refresh user", error);
+            }
+        }
+    };
+
     const value = {
         user,
         token,
@@ -108,6 +147,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         register,
         logout,
         updateProfileStatus,
+        refreshUser,
         isAuthenticated: !!user && !!token,
     };
 

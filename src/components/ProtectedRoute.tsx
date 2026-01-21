@@ -6,6 +6,8 @@ interface ProtectedRouteProps {
     allowedRoles?: string[];
 }
 
+import AccountDisabledModal from './dashboard/AccountDisabledModal';
+
 const ProtectedRoute = ({ children, allowedRoles }: ProtectedRouteProps) => {
     const { user, loading } = useAuth();
 
@@ -21,9 +23,17 @@ const ProtectedRoute = ({ children, allowedRoles }: ProtectedRouteProps) => {
         return <Navigate to="/signin" replace />;
     }
 
+    if (user.status === 'disabled') {
+        return <AccountDisabledModal open={true} />;
+    }
+
     // Check if profile is incomplete (excluding admin and driver for now)
     if (user.profile_completed === false && !['admin', 'driver'].includes(user.role)) {
         return <Navigate to={`/signup?role=${user.role}`} replace />;
+    }
+
+    if (user.email_verified === false) {
+        return <Navigate to="/verification-pending" replace />;
     }
 
     if (allowedRoles && !allowedRoles.includes(user.role)) {

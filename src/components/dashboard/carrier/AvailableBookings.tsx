@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { MapPin, Calendar, Package, DollarSign, User, Send, FileText, Loader2, CheckCircle2, Clock } from 'lucide-react';
+import { MapPin, Calendar, Package, DollarSign, User, Send, FileText, Loader2, CheckCircle2, Clock, MessageSquare } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -13,7 +13,11 @@ import api from '@/lib/api';
 
 type BookingTab = 'available' | 'my-quotes' | 'won-jobs';
 
-const AvailableBookings = () => {
+interface AvailableBookingsProps {
+  onMessage?: (bookingId: string, participantId: string) => void;
+}
+
+const AvailableBookings = ({ onMessage }: AvailableBookingsProps) => {
   const [activeTab, setActiveTab] = useState<BookingTab>('available');
   const [bookings, setBookings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -72,8 +76,8 @@ const AvailableBookings = () => {
   };
 
   const handleSubmitQuote = async () => {
-    if (!quotePrice) {
-      toast.error('Please enter your quote price');
+    if (!quotePrice || !selectedDriver || !selectedEquipment || !quoteNotes) {
+      toast.error('Please fill in all fields (Price, Driver, Vehicle, and Notes)');
       return;
     }
 
@@ -97,6 +101,18 @@ const AvailableBookings = () => {
       toast.error(error.response?.data?.message || 'Failed to submit quote');
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleUpdateBookingStatus = async (bookingId: string, newStatus: string) => {
+    try {
+      const response = await api.patch(`/bookings/${bookingId}/status`, { status: newStatus });
+      if (response.data.success) {
+        toast.success(`Booking status updated to ${newStatus.replace('_', ' ')}`);
+        fetchBookings();
+      }
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Failed to update status');
     }
   };
 
@@ -246,10 +262,40 @@ const AvailableBookings = () => {
                         <p className="text-xl font-bold text-primary">${Number(booking.amount).toLocaleString()}</p>
                       </div>
                     ) : (
-                      <div className="text-right">
-                        <p className="text-xs text-muted-foreground font-bold uppercase">Accepted Price</p>
-                        <p className="text-xl font-bold text-green-600">${Number(booking.agreed_price).toLocaleString()}</p>
-                        <Badge variant="outline" className="mt-1 bg-green-50 text-green-700 border-green-200">Booked</Badge>
+                      <div className="text-right space-y-2">
+                        <div>
+                          <p className="text-xs text-muted-foreground font-bold uppercase">Accepted Price</p>
+                          <p className="text-xl font-bold text-green-600">${Number(booking.agreed_price).toLocaleString()}</p>
+                        </div>
+                        <div className="flex flex-col gap-2">
+                          <Select
+                            value={booking.status}
+                            onValueChange={(val) => handleUpdateBookingStatus(booking.id, val)}
+                          >
+                            <SelectTrigger className="w-[140px] h-8 text-xs">
+                              <SelectValue placeholder="Update Status" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="booked">Booked</SelectItem>
+                              <SelectItem value="in_transit">In Transit</SelectItem>
+                              <SelectItem value="delivered">Delivered</SelectItem>
+                              <SelectItem value="completed">Completed</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 justify-center">
+                            {booking.status.replace('_', ' ')}
+                          </Badge>
+                          {onMessage && (
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              className="w-[140px] h-8 text-xs gap-1"
+                              onClick={() => onMessage(booking.id, booking.shipper_id)}
+                            >
+                              <MessageSquare size={14} /> Chat Shipper
+                            </Button>
+                          )}
+                        </div>
                       </div>
                     )}
                   </div>
@@ -373,7 +419,7 @@ const AvailableBookings = () => {
             </div>
 
             <div className="space-y-2">
-              <Label>Your Quote Price (Total Service Fee)</Label>
+              <Label>Your Quote Price (Total Service Fee) *</Label>
               <div className="relative">
                 <DollarSign className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
@@ -388,7 +434,7 @@ const AvailableBookings = () => {
 
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Assign Driver</Label>
+                <Label>Assign Driver *</Label>
                 <Select value={selectedDriver} onValueChange={setSelectedDriver}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select driver" />
@@ -406,7 +452,7 @@ const AvailableBookings = () => {
               </div>
 
               <div className="space-y-2">
-                <Label>Select Vehicle</Label>
+                <Label>Select Vehicle *</Label>
                 <Select value={selectedEquipment} onValueChange={setSelectedEquipment}>
                   <SelectTrigger>
                     <SelectValue placeholder="Select vehicle" />
@@ -425,7 +471,7 @@ const AvailableBookings = () => {
             </div>
 
             <div className="space-y-2">
-              <Label>Additional Notes (Optional)</Label>
+              <Label>Additional Notes (Required)</Label>
               <Textarea
                 placeholder="Escort status, insurance coverage, or special terms..."
                 value={quoteNotes}

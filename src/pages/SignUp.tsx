@@ -12,7 +12,7 @@ import api from "@/lib/api";
 import { toast } from "sonner";
 import heroImage from "@/assets/hero.svg";
 import { motion, AnimatePresence } from "framer-motion";
-import { CheckCircle2 } from "lucide-react";
+import { CheckCircle2, Eye, EyeOff } from "lucide-react";
 
 const SignUp = () => {
     const [searchParams] = useSearchParams();
@@ -28,6 +28,8 @@ const SignUp = () => {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [confirmPassword, setConfirmPassword] = useState("");
+    const [showPassword, setShowPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
     const [role, setRole] = useState<"shipper" | "carrier" | "escort">("shipper");
     const [agreeToTerms, setAgreeToTerms] = useState(false);
 
@@ -67,8 +69,12 @@ const SignUp = () => {
                 return;
             }
 
-            // If profile IS complete, redirect to dashboard
+            // If profile IS complete, redirect to dashboard (but only if verified)
             if (!loading && user.profile_completed === true) {
+                if (user.email_verified === false) {
+                    navigate('/verification-pending', { replace: true });
+                    return;
+                }
                 const dashboardRoute = {
                     shipper: '/dashboard/shipper',
                     carrier: '/dashboard/carrier',
@@ -109,7 +115,7 @@ const SignUp = () => {
                 role
             });
 
-            toast.success("Account created! Please complete your profile.");
+            toast.success("Account created! Now please complete your profile.");
             setStep(2);
         } catch (error: any) {
             toast.error(error.message || "Registration failed. Please try again.");
@@ -135,16 +141,20 @@ const SignUp = () => {
             // Update the profile status in AuthContext
             updateProfileStatus(true);
 
-            // Navigate based on role
-            const dashboardRoute = {
-                shipper: '/dashboard/shipper',
-                carrier: '/dashboard/carrier',
-                escort: '/dashboard/escort',
-                admin: '/dashboard/admin',
-                driver: '/dashboard/driver'
-            }[role] || '/';
+            // Navigate based on role (only if verified)
+            if (user?.email_verified === false) {
+                navigate('/verification-pending', { replace: true });
+            } else {
+                const dashboardRoute = {
+                    shipper: '/dashboard/shipper',
+                    carrier: '/dashboard/carrier',
+                    escort: '/dashboard/escort',
+                    admin: '/dashboard/admin',
+                    driver: '/dashboard/driver'
+                }[role] || '/';
 
-            navigate(dashboardRoute, { replace: true });
+                navigate(dashboardRoute, { replace: true });
+            }
         } catch (error: any) {
             toast.error(error.response?.data?.message || "Failed to save profile. Please try again.");
         } finally {
@@ -217,25 +227,45 @@ const SignUp = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                         <Label htmlFor="password">Password</Label>
-                        <Input
-                            id="password"
-                            type="password"
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            required
-                            minLength={8}
-                        />
+                        <div className="relative">
+                            <Input
+                                id="password"
+                                type={showPassword ? "text" : "password"}
+                                value={password}
+                                onChange={(e) => setPassword(e.target.value)}
+                                required
+                                minLength={8}
+                                className="pr-10"
+                            />
+                            <button
+                                type="button"
+                                onClick={() => setShowPassword(!showPassword)}
+                                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                            >
+                                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                            </button>
+                        </div>
                     </div>
                     <div className="space-y-2">
                         <Label htmlFor="confirmPassword">Confirm Password</Label>
-                        <Input
-                            id="confirmPassword"
-                            type="password"
-                            value={confirmPassword}
-                            onChange={(e) => setConfirmPassword(e.target.value)}
-                            required
-                            minLength={8}
-                        />
+                        <div className="relative">
+                            <Input
+                                id="confirmPassword"
+                                type={showConfirmPassword ? "text" : "password"}
+                                value={confirmPassword}
+                                onChange={(e) => setConfirmPassword(e.target.value)}
+                                required
+                                minLength={8}
+                                className="pr-10"
+                            />
+                            <button
+                                type="button"
+                                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                                className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                            >
+                                {showConfirmPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                            </button>
+                        </div>
                     </div>
                 </div>
 

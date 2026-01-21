@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Car,
   Plus,
@@ -7,6 +7,7 @@ import {
   CheckCircle,
   XCircle,
   AlertCircle,
+  Loader2,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -28,99 +29,94 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { toast } from "sonner";
+import api from "@/lib/api";
 
-const mockVehicles = [
-  {
-    id: "V001",
-    name: "Ford F-150 #1",
-    type: "Pickup Truck",
-    year: "2022",
-    plateNumber: "TX-ESC-001",
-    color: "White",
-    equipment: ["LED Light Bar", "Flags", "Two-Way Radio", "First Aid Kit"],
-    lastInspection: "2024-01-10",
-    status: "available",
-  },
-  {
-    id: "V002",
-    name: "Chevy Silverado #2",
-    type: "Pickup Truck",
-    year: "2021",
-    plateNumber: "TX-ESC-002",
-    color: "Yellow",
-    equipment: ["LED Light Bar", "Flags", "Two-Way Radio", "CB Radio"],
-    lastInspection: "2024-01-05",
-    status: "available",
-  },
-  {
-    id: "V003",
-    name: "Dodge Ram #3",
-    type: "Pickup Truck",
-    year: "2023",
-    plateNumber: "TX-ESC-003",
-    color: "Orange",
-    equipment: ["LED Light Bar", "Flags", "Two-Way Radio", "GPS Tracker"],
-    lastInspection: "2023-12-20",
-    status: "on-job",
-  },
-];
-
-const vehicleTypes = ["Pickup Truck", "SUV", "Van"];
-const equipmentOptions = [
-  "LED Light Bar",
-  "Flags",
-  "Two-Way Radio",
-  "CB Radio",
-  "First Aid Kit",
-  "GPS Tracker",
-  "Arrow Board",
-  "Height Pole",
-];
+const vehicleTypes = ["Pickup Truck", "SUV", "Van", "Pilot Car"];
 
 const VehiclesManagement = () => {
-  const [vehicles, setVehicles] = useState(mockVehicles);
+  const [vehicles, setVehicles] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isDeleting, setIsDeleting] = useState<string | null>(null);
+
   const [dialogOpen, setDialogOpen] = useState(false);
-  const [editingVehicle, setEditingVehicle] = useState<typeof mockVehicles[0] | null>(null);
+  const [editingVehicle, setEditingVehicle] = useState<any | null>(null);
   const [formData, setFormData] = useState({
     name: "",
     type: "",
     year: "",
-    plateNumber: "",
-    color: "",
-    equipment: [] as string[],
+    plate_number: "",
+    vin: "",
+    capacity: "",
+    dimensions: "",
+    status: "available",
+    last_inspection: "",
   });
 
-  const handleAddEdit = () => {
-    if (!formData.name || !formData.type || !formData.plateNumber) {
-      toast.error("Please fill in all required fields");
+  useEffect(() => {
+    fetchVehicles();
+  }, []);
+
+  const fetchVehicles = async () => {
+    setLoading(true);
+    try {
+      const response = await api.get('/vehicles');
+      if (response.data.success) {
+        setVehicles(response.data.data);
+      }
+    } catch (error) {
+      console.error('Fetch vehicles error:', error);
+      toast.error('Failed to load vehicles');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSave = async () => {
+    if (!formData.name || !formData.type || !formData.plate_number) {
+      toast.error("Please fill in all required fields (Name, Type, Plate)");
       return;
     }
 
-    if (editingVehicle) {
-      setVehicles(vehicles.map(v => 
-        v.id === editingVehicle.id 
-          ? { ...v, ...formData, lastInspection: v.lastInspection }
-          : v
-      ));
-      toast.success("Vehicle updated successfully");
-    } else {
-      const newVehicle = {
-        id: `V${String(vehicles.length + 1).padStart(3, "0")}`,
-        ...formData,
-        lastInspection: new Date().toISOString().split("T")[0],
-        status: "available" as const,
-      };
-      setVehicles([...vehicles, newVehicle]);
-      toast.success("Vehicle added successfully");
+    setIsSaving(true);
+    try {
+      if (editingVehicle) {
+        const response = await api.put(`/vehicles/${editingVehicle.id}`, formData);
+        if (response.data.success) {
+          toast.success("Vehicle updated successfully");
+          fetchVehicles();
+        }
+      } else {
+        const response = await api.post('/vehicles', formData);
+        if (response.data.success) {
+          toast.success("Vehicle added successfully");
+          fetchVehicles();
+        }
+      }
+      setDialogOpen(false);
+      resetForm();
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || "Failed to save vehicle");
+    } finally {
+      setIsSaving(false);
     }
-
-    setDialogOpen(false);
-    resetForm();
   };
 
-  const handleDelete = (id: string) => {
-    setVehicles(vehicles.filter(v => v.id !== id));
-    toast.success("Vehicle removed");
+  const handleDelete = async (id: string) => {
+    if (!confirm("Are you sure you want to remove this vehicle?")) return;
+
+    setIsDeleting(id);
+    try {
+      const response = await api.delete(`/vehicles/${id}`);
+      if (response.data.success) {
+        toast.success("Vehicle removed");
+        setVehicles(vehicles.filter(v => v.id !== id));
+      }
+    } catch (error) {
+      toast.error("Failed to delete vehicle");
+    } finally {
+      setIsDeleting(null);
+    }
   };
 
   const resetForm = () => {
@@ -128,51 +124,45 @@ const VehiclesManagement = () => {
       name: "",
       type: "",
       year: "",
-      plateNumber: "",
-      color: "",
-      equipment: [],
+      plate_number: "",
+      vin: "",
+      capacity: "",
+      dimensions: "",
+      status: "available",
+      last_inspection: new Date().toISOString().split('T')[0],
     });
     setEditingVehicle(null);
   };
 
-  const openEditDialog = (vehicle: typeof mockVehicles[0]) => {
+  const openEditDialog = (vehicle: any) => {
     setEditingVehicle(vehicle);
     setFormData({
       name: vehicle.name,
       type: vehicle.type,
-      year: vehicle.year,
-      plateNumber: vehicle.plateNumber,
-      color: vehicle.color,
-      equipment: vehicle.equipment,
+      year: vehicle.year || "",
+      plate_number: vehicle.plate_number || "",
+      vin: vehicle.vin || "",
+      capacity: vehicle.capacity || "",
+      dimensions: vehicle.dimensions || "",
+      status: vehicle.status || "available",
+      last_inspection: vehicle.last_inspection ? new Date(vehicle.last_inspection).toISOString().split('T')[0] : "",
     });
     setDialogOpen(true);
-  };
-
-  const toggleEquipment = (item: string) => {
-    setFormData(prev => ({
-      ...prev,
-      equipment: prev.equipment.includes(item)
-        ? prev.equipment.filter(e => e !== item)
-        : [...prev.equipment, item],
-    }));
   };
 
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "available":
-        return <Badge className="bg-green-500"><CheckCircle className="h-3 w-3 mr-1" />Available</Badge>;
+        return <Badge className="bg-green-500/20 text-green-600 border-0"><CheckCircle className="h-3 w-3 mr-1" />Available</Badge>;
+      case "in-use":
       case "on-job":
-        return <Badge variant="secondary"><AlertCircle className="h-3 w-3 mr-1" />On Job</Badge>;
+        return <Badge className="bg-blue-500/20 text-blue-600 border-0"><AlertCircle className="h-3 w-3 mr-1" />On Job</Badge>;
+      case "maintenance":
+        return <Badge className="bg-yellow-500/20 text-yellow-600 border-0">Maintenance</Badge>;
       default:
-        return <Badge variant="outline"><XCircle className="h-3 w-3 mr-1" />Unavailable</Badge>;
+        return <Badge variant="outline">{status}</Badge>;
     }
   };
-
-  const stats = [
-    { label: "Total Vehicles", value: vehicles.length, icon: Car },
-    { label: "Available", value: vehicles.filter(v => v.status === "available").length, icon: CheckCircle },
-    { label: "On Job", value: vehicles.filter(v => v.status === "on-job").length, icon: AlertCircle },
-  ];
 
   return (
     <div className="space-y-6">
@@ -181,111 +171,98 @@ const VehiclesManagement = () => {
           <h1 className="text-3xl font-display font-bold">My Vehicles</h1>
           <p className="text-muted-foreground">Manage your escort vehicles and equipment</p>
         </div>
-        <Button onClick={() => { resetForm(); setDialogOpen(true); }} className="gap-2">
+        <Button onClick={() => { resetForm(); setDialogOpen(true); }} className="gap-2 shadow-md">
           <Plus className="h-4 w-4" />
           Add Vehicle
         </Button>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {stats.map((stat, index) => (
-          <Card key={index}>
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">{stat.label}</p>
-                  <p className="text-3xl font-bold">{stat.value}</p>
+      {loading ? (
+        <div className="flex flex-col items-center justify-center py-20">
+          <Loader2 className="h-10 w-10 animate-spin text-primary opacity-20" />
+          <p className="text-muted-foreground mt-4">Loading your fleet...</p>
+        </div>
+      ) : vehicles.length === 0 ? (
+        <Card className="border-dashed">
+          <CardContent className="py-12 text-center">
+            <Car className="h-12 w-12 mx-auto text-muted-foreground opacity-20 mb-4" />
+            <h3 className="text-lg font-medium">No vehicles found</h3>
+            <p className="text-muted-foreground">Add your first escort vehicle to start quoting on jobs.</p>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {vehicles.map((vehicle) => (
+            <Card key={vehicle.id} className="hover:border-primary/50 transition-all border shadow-sm group">
+              <CardHeader className="pb-3 border-b bg-muted/30">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <CardTitle className="text-lg font-bold">{vehicle.name}</CardTitle>
+                    <p className="text-xs text-muted-foreground uppercase font-bold tracking-widest">{vehicle.type} {vehicle.year && `• ${vehicle.year}`}</p>
+                  </div>
+                  {getStatusBadge(vehicle.status)}
                 </div>
-                <stat.icon className="h-8 w-8 text-primary" />
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+              </CardHeader>
+              <CardContent className="space-y-4 pt-4">
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div>
+                    <p className="text-[10px] text-muted-foreground uppercase font-bold">Plate Number</p>
+                    <p className="font-mono font-bold text-primary">{vehicle.plate_number}</p>
+                  </div>
+                  <div>
+                    <p className="text-[10px] text-muted-foreground uppercase font-bold">VIN</p>
+                    <p className="font-mono text-xs truncate" title={vehicle.vin}>{vehicle.vin || 'N/A'}</p>
+                  </div>
+                </div>
 
-      {/* Vehicles Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {vehicles.map((vehicle) => (
-          <Card key={vehicle.id} className="hover:border-primary/50 transition-colors">
-            <CardHeader className="pb-3">
-              <div className="flex items-start justify-between">
-                <div>
-                  <CardTitle className="text-lg">{vehicle.name}</CardTitle>
-                  <p className="text-sm text-muted-foreground">{vehicle.type} • {vehicle.year}</p>
+                <div className="text-xs p-2 bg-muted/50 rounded border flex justify-between items-center">
+                  <span className="text-muted-foreground">Last Inspection</span>
+                  <span className="font-medium">{vehicle.last_inspection ? new Date(vehicle.last_inspection).toLocaleDateString() : 'Never'}</span>
                 </div>
-                {getStatusBadge(vehicle.status)}
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-3">
-              <div className="grid grid-cols-2 gap-2 text-sm">
-                <div>
-                  <p className="text-muted-foreground">Plate</p>
-                  <p className="font-medium">{vehicle.plateNumber}</p>
-                </div>
-                <div>
-                  <p className="text-muted-foreground">Color</p>
-                  <p className="font-medium">{vehicle.color}</p>
-                </div>
-              </div>
 
-              <div>
-                <p className="text-sm text-muted-foreground mb-2">Equipment</p>
-                <div className="flex flex-wrap gap-1">
-                  {vehicle.equipment.map((item, idx) => (
-                    <Badge key={idx} variant="outline" className="text-xs">
-                      {item}
-                    </Badge>
-                  ))}
+                <div className="flex gap-2 pt-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="flex-1 gap-1"
+                    onClick={() => openEditDialog(vehicle)}
+                  >
+                    <Edit2 className="h-3 w-3" />
+                    Edit
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                    onClick={() => handleDelete(vehicle.id)}
+                    disabled={isDeleting === vehicle.id}
+                  >
+                    {isDeleting === vehicle.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Trash2 className="h-3 w-3" />}
+                  </Button>
                 </div>
-              </div>
-
-              <div className="text-xs text-muted-foreground">
-                Last Inspection: {vehicle.lastInspection}
-              </div>
-
-              <div className="flex gap-2 pt-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="flex-1 gap-1"
-                  onClick={() => openEditDialog(vehicle)}
-                >
-                  <Edit2 className="h-3 w-3" />
-                  Edit
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  className="text-destructive hover:text-destructive"
-                  onClick={() => handleDelete(vehicle.id)}
-                >
-                  <Trash2 className="h-3 w-3" />
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      )}
 
       {/* Add/Edit Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>{editingVehicle ? "Edit Vehicle" : "Add New Vehicle"}</DialogTitle>
+            <DialogTitle>{editingVehicle ? "Update Escort Vehicle" : "Add Escort Vehicle"}</DialogTitle>
           </DialogHeader>
 
           <div className="space-y-4 py-4">
-            <div className="space-y-2">
-              <Label>Vehicle Name *</Label>
-              <Input
-                placeholder="e.g., Ford F-150 #1"
-                value={formData.name}
-                onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              />
-            </div>
-
             <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Vehicle Name *</Label>
+                <Input
+                  placeholder="Ford F-150 #1"
+                  value={formData.name}
+                  onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                />
+              </div>
               <div className="space-y-2">
                 <Label>Type *</Label>
                 <Select value={formData.type} onValueChange={(v) => setFormData({ ...formData, type: v })}>
@@ -299,6 +276,28 @@ const VehiclesManagement = () => {
                   </SelectContent>
                 </Select>
               </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label>Plate Number *</Label>
+                <Input
+                  placeholder="TX-ESC-001"
+                  value={formData.plate_number}
+                  onChange={(e) => setFormData({ ...formData, plate_number: e.target.value })}
+                />
+              </div>
+              <div className="space-y-2">
+                <Label>VIN</Label>
+                <Input
+                  placeholder="VIN Number"
+                  value={formData.vin}
+                  onChange={(e) => setFormData({ ...formData, vin: e.target.value })}
+                />
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>Year</Label>
                 <Input
@@ -307,48 +306,36 @@ const VehiclesManagement = () => {
                   onChange={(e) => setFormData({ ...formData, year: e.target.value })}
                 />
               </div>
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label>Plate Number *</Label>
-                <Input
-                  placeholder="TX-ESC-001"
-                  value={formData.plateNumber}
-                  onChange={(e) => setFormData({ ...formData, plateNumber: e.target.value })}
-                />
-              </div>
-              <div className="space-y-2">
-                <Label>Color</Label>
-                <Input
-                  placeholder="White"
-                  value={formData.color}
-                  onChange={(e) => setFormData({ ...formData, color: e.target.value })}
-                />
+                <Label>Status</Label>
+                <Select value={formData.status} onValueChange={(v) => setFormData({ ...formData, status: v })}>
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="available">Available</SelectItem>
+                    <SelectItem value="in-use">In Use</SelectItem>
+                    <SelectItem value="maintenance">Maintenance</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 
             <div className="space-y-2">
-              <Label>Equipment</Label>
-              <div className="flex flex-wrap gap-2">
-                {equipmentOptions.map((item) => (
-                  <Badge
-                    key={item}
-                    variant={formData.equipment.includes(item) ? "default" : "outline"}
-                    className="cursor-pointer"
-                    onClick={() => toggleEquipment(item)}
-                  >
-                    {item}
-                  </Badge>
-                ))}
-              </div>
+              <Label>Last Inspection Date</Label>
+              <Input
+                type="date"
+                value={formData.last_inspection}
+                onChange={(e) => setFormData({ ...formData, last_inspection: e.target.value })}
+              />
             </div>
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => setDialogOpen(false)}>Cancel</Button>
-            <Button onClick={handleAddEdit}>
-              {editingVehicle ? "Save Changes" : "Add Vehicle"}
+            <Button variant="outline" onClick={() => setDialogOpen(false)} disabled={isSaving}>Cancel</Button>
+            <Button onClick={handleSave} disabled={isSaving}>
+              {isSaving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+              {editingVehicle ? "Save Changes" : "Register Vehicle"}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -44,10 +44,13 @@ import {
 import { toast } from "sonner";
 import NewBooking from "./NewBooking";
 import { useAuth } from "@/contexts/AuthContext";
+import ProviderProfileDialog from "./admin/ProviderProfileDialog";
+import { Shield } from "lucide-react";
 
 interface BookingsListProps {
   onTrack: () => void;
-  onMessage: () => void;
+  onMessage: (bookingId: string, providerId: string) => void;
+  onReview?: (bookingId: string) => void;
 }
 
 const statusConfig: Record<string, { label: string; color: string; icon: any }> = {
@@ -60,7 +63,7 @@ const statusConfig: Record<string, { label: string; color: string; icon: any }> 
   "cancelled": { label: "Cancelled", color: "bg-red-500/20 text-red-600", icon: AlertCircle },
 };
 
-const BookingsList = ({ onTrack, onMessage }: BookingsListProps) => {
+const BookingsList = ({ onTrack, onMessage, onReview }: BookingsListProps) => {
   const { user } = useAuth();
   const [bookings, setBookings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -72,6 +75,8 @@ const BookingsList = ({ onTrack, onMessage }: BookingsListProps) => {
   const [quotes, setQuotes] = useState<any[]>([]);
   const [loadingQuotes, setLoadingQuotes] = useState(false);
   const [acceptingQuoteId, setAcceptingQuoteId] = useState<string | null>(null);
+  const [viewProviderId, setViewProviderId] = useState<string | null>(null);
+  const [profileDialogOpen, setProfileDialogOpen] = useState(false);
 
   useEffect(() => {
     fetchBookings();
@@ -136,6 +141,12 @@ const BookingsList = ({ onTrack, onMessage }: BookingsListProps) => {
     dimensions: `${b.dimensions_length_ft}ft x ${b.dimensions_width_ft}ft x ${b.dimensions_height_ft}ft`,
     weight: `${Number(b.weight_lbs).toLocaleString()} lbs`,
     specialInstructions: b.special_instructions,
+    carrier_id: b.carrier_id,
+    carrier_name: b.carrier_name,
+    carrier_company: b.carrier_company,
+    escort_id: b.escort_id,
+    escort_name: b.escort_name,
+    escort_company: b.escort_company,
     rawBooking: b
   });
 
@@ -307,52 +318,55 @@ const BookingsList = ({ onTrack, onMessage }: BookingsListProps) => {
                         {booking.price > 0 ? `$${booking.price.toLocaleString()}` : 'TBD'}
                       </td>
                       <td className="px-6 py-4">
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon">
-                              <MoreVertical size={18} />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem onClick={() => viewDetails(rawBooking)}>
-                              <Eye size={16} className="mr-2" />
-                              View Details
-                            </DropdownMenuItem>
+                        <div className="flex items-center gap-2">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => viewDetails(rawBooking)}
+                            title="View Details"
+                          >
+                            <Eye size={18} className="text-primary" />
+                          </Button>
 
-                            {canModify && (
-                              <>
-                                <DropdownMenuItem onClick={() => handleEdit(rawBooking)}>
-                                  <Pencil size={16} className="mr-2" />
-                                  Edit Booking
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  onClick={() => handleDeleteClick(rawBooking)}
-                                  className="text-destructive focus:text-destructive"
-                                >
-                                  <Trash2 size={16} className="mr-2" />
-                                  Delete Booking
-                                </DropdownMenuItem>
-                              </>
-                            )}
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="ghost" size="icon">
+                                <MoreVertical size={18} />
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent align="end">
+                              {canModify && (
+                                <>
+                                  <DropdownMenuItem onClick={() => handleEdit(rawBooking)}>
+                                    <Pencil size={16} className="mr-2" />
+                                    Edit Booking
+                                  </DropdownMenuItem>
+                                  <DropdownMenuItem
+                                    onClick={() => handleDeleteClick(rawBooking)}
+                                    className="text-destructive focus:text-destructive"
+                                  >
+                                    <Trash2 size={16} className="mr-2" />
+                                    Delete Booking
+                                  </DropdownMenuItem>
+                                </>
+                              )}
 
-                            {booking.status === "in_transit" && (
-                              <DropdownMenuItem onClick={onTrack}>
-                                <MapPin size={16} className="mr-2" />
-                                Track Shipment
-                              </DropdownMenuItem>
-                            )}
-                            <DropdownMenuItem onClick={onMessage}>
-                              <MessageSquare size={16} className="mr-2" />
-                              Message Carrier
-                            </DropdownMenuItem>
-                            {(booking.status === "completed" || booking.status === "delivered") && (
-                              <DropdownMenuItem>
-                                <Star size={16} className="mr-2" />
-                                Leave Review
-                              </DropdownMenuItem>
-                            )}
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                              {booking.status === "in_transit" && (
+                                <DropdownMenuItem onClick={onTrack}>
+                                  <MapPin size={16} className="mr-2" />
+                                  Track Shipment
+                                </DropdownMenuItem>
+                              )}
+
+                              {(booking.status === "completed" || booking.status === "delivered") && (
+                                <DropdownMenuItem onClick={() => onReview && onReview(booking.id)}>
+                                  <Star size={16} className="mr-2" />
+                                  Leave Review
+                                </DropdownMenuItem>
+                              )}
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </div>
                       </td>
                     </tr>
                   );
@@ -379,8 +393,10 @@ const BookingsList = ({ onTrack, onMessage }: BookingsListProps) => {
                   <p className="font-semibold">{selectedBooking.cargoType}</p>
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground mb-1">Carrier</p>
-                  <p className="font-semibold">{selectedBooking.carrier}</p>
+                  <p className="text-sm text-muted-foreground mb-1">Status</p>
+                  <Badge className={`${statusConfig[selectedBooking.status]?.color || "bg-muted"} border-0 capitalize`}>
+                    {selectedBooking.status.replace('_', ' ')}
+                  </Badge>
                 </div>
                 <div className="md:col-span-2">
                   <p className="text-sm text-muted-foreground mb-1">Pickup Location</p>
@@ -409,6 +425,85 @@ const BookingsList = ({ onTrack, onMessage }: BookingsListProps) => {
                   </p>
                 </div>
               </div>
+
+              {/* Matched Providers Section */}
+              {(selectedBooking.carrier_id || selectedBooking.escort_id) && (
+                <div className="space-y-4 pt-4 border-t border-border">
+                  <h4 className="font-semibold text-lg">Matched Service Providers</h4>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {selectedBooking.carrier_id && (
+                      <div className="p-4 bg-muted/30 rounded-xl border space-y-3">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                            <Truck className="text-primary" size={20} />
+                          </div>
+                          <div>
+                            <p className="text-xs text-muted-foreground font-bold uppercase">Carrier</p>
+                            <p className="font-bold leading-tight">{selectedBooking.carrier_company || selectedBooking.carrier_name}</p>
+                          </div>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="flex-1 h-8 text-xs"
+                            onClick={() => {
+                              setViewProviderId(selectedBooking.carrier_id);
+                              setProfileDialogOpen(true);
+                            }}
+                          >
+                            <User size={14} className="mr-1" /> Profile
+                          </Button>
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            className="flex-1 h-8 text-xs"
+                            onClick={() => onMessage(selectedBooking.id, selectedBooking.carrier_id)}
+                          >
+                            <MessageSquare size={14} className="mr-1" /> Chat
+                          </Button>
+
+                        </div>
+                      </div>
+                    )}
+                    {selectedBooking.escort_id && (
+                      <div className="p-4 bg-purple-50 rounded-xl border border-purple-100 space-y-3">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center">
+                            <Shield className="text-purple-600" size={20} />
+                          </div>
+                          <div>
+                            <p className="text-xs text-purple-600 font-bold uppercase">Escort</p>
+                            <p className="font-bold leading-tight text-purple-900">{selectedBooking.escort_company || selectedBooking.escort_name}</p>
+                          </div>
+                        </div>
+                        <div className="flex gap-2">
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="flex-1 h-8 text-xs border-purple-200 text-purple-700 hover:bg-purple-50"
+                            onClick={() => {
+                              setViewProviderId(selectedBooking.escort_id);
+                              setProfileDialogOpen(true);
+                            }}
+                          >
+                            <User size={14} className="mr-1" /> Profile
+                          </Button>
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            className="flex-1 h-8 text-xs bg-purple-600 text-white hover:bg-purple-700"
+                            onClick={() => onMessage(selectedBooking.id, selectedBooking.escort_id)}
+                          >
+                            <MessageSquare size={14} className="mr-1" /> Chat
+                          </Button>
+
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
 
               {user?.role === "admin" && (selectedBooking.status === "pending_quote" || selectedBooking.status === "quoted") && (
                 <div className="space-y-4 pt-4 border-t border-border">
@@ -480,10 +575,7 @@ const BookingsList = ({ onTrack, onMessage }: BookingsListProps) => {
                     Track Shipment
                   </Button>
                 )}
-                <Button variant="outline" onClick={onMessage} className="flex-1 md:flex-none">
-                  <MessageSquare size={18} className="mr-2" />
-                  Message Carrier
-                </Button>
+
               </div>
             </div>
           )}
@@ -535,6 +627,12 @@ const BookingsList = ({ onTrack, onMessage }: BookingsListProps) => {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+
+      <ProviderProfileDialog
+        providerId={viewProviderId}
+        open={profileDialogOpen}
+        onOpenChange={setProfileDialogOpen}
+      />
     </div>
   );
 };

@@ -1,41 +1,73 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useSearchParams } from "react-router-dom";
 import AvailableBookings from '@/components/dashboard/carrier/AvailableBookings';
 import DriversManagement from '@/components/dashboard/carrier/DriversManagement';
 import EquipmentManagement from '@/components/dashboard/carrier/EquipmentManagement';
-import PricingSettings from '@/components/dashboard/carrier/PricingSettings';
+
 import CarrierPayouts from '@/components/dashboard/carrier/CarrierPayouts';
 import CarrierWallet from '@/components/dashboard/carrier/CarrierWallet';
-import CarrierMessaging from '@/components/dashboard/carrier/CarrierMessaging';
+import MessagingSection from '@/components/dashboard/MessagingSection';
+import ProviderReviews from '@/components/dashboard/ProviderReviews';
 import DashboardLayout from '@/components/dashboard/DashboardLayout';
 
-type TabType = 'bookings' | 'drivers' | 'equipment' | 'pricing' | 'payouts' | 'wallet' | 'messages';
+type TabType = 'bookings' | 'drivers' | 'equipment' | 'payouts' | 'wallet' | 'messages' | 'reviews';
 
 const CarrierDashboard = () => {
-  const [activeTab, setActiveTab] = useState<TabType>('bookings');
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [activeTab, setActiveTab] = useState<TabType>(
+    (searchParams.get("section") as TabType) || 'bookings'
+  );
+  const [chatContext, setChatContext] = useState<{ bookingId: string | null; participantId: string } | null>(null);
+
+  useEffect(() => {
+    const section = searchParams.get("section");
+    if (section) {
+      setActiveTab(section as TabType);
+    }
+  }, [searchParams]);
+
+  const handleSectionChange = (section: string) => {
+    setActiveTab(section as TabType);
+    setSearchParams({ section });
+  };
+
+  const handleStartChat = (participantId: string, bookingId: string | null = null) => {
+    setChatContext({ bookingId, participantId });
+    setActiveTab('messages');
+    setSearchParams({ section: "messages" });
+  };
 
   const renderContent = () => {
     switch (activeTab) {
       case 'bookings':
-        return <AvailableBookings />;
+        return <AvailableBookings onMessage={handleStartChat} />;
       case 'drivers':
         return <DriversManagement />;
       case 'equipment':
         return <EquipmentManagement />;
-      case 'pricing':
-        return <PricingSettings />;
+
       case 'payouts':
         return <CarrierPayouts />;
       case 'wallet':
         return <CarrierWallet />;
       case 'messages':
-        return <CarrierMessaging />;
+        return <MessagingSection
+          initialContext={chatContext}
+          initialConversationId={searchParams.get("conversationId")}
+        />;
+      case 'reviews':
+        return <ProviderReviews />;
       default:
-        return <AvailableBookings />;
+        return <AvailableBookings onMessage={handleStartChat} />;
     }
   };
 
   return (
-    <DashboardLayout activeSection={activeTab} onSectionChange={(section) => setActiveTab(section as TabType)}>
+    <DashboardLayout
+      activeSection={activeTab}
+      onSectionChange={handleSectionChange}
+      onMessage={handleStartChat}
+    >
       {renderContent()}
     </DashboardLayout>
   );

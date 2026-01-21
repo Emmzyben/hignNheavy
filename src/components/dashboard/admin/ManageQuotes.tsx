@@ -1,337 +1,437 @@
 import { useState, useEffect } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import {
   Search,
-  Filter,
-  Check,
-  X,
   Truck,
   Car,
   Calendar,
-  Clock,
-  DollarSign,
   MapPin,
-  User,
   Package,
-  Loader2
+  Loader2,
+  CheckCircle2,
+  Info,
+  ChevronRight,
+  User
 } from "lucide-react";
+import ProviderProfileDialog from "./ProviderProfileDialog";
 import { toast } from "sonner";
 import api from "@/lib/api";
 
 const ManageQuotes = () => {
-  const [quotes, setQuotes] = useState<any[]>([]);
+  const [bookings, setBookings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedQuote, setSelectedQuote] = useState<any | null>(null);
-  const [detailsOpen, setDetailsOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [isProcessing, setIsProcessing] = useState(false);
+  const [selectedBooking, setSelectedBooking] = useState<any | null>(null);
+  const [detailsOpen, setDetailsOpen] = useState(false);
+  const [quotes, setQuotes] = useState<any[]>([]);
+  const [loadingQuotes, setLoadingQuotes] = useState(false);
+  const [selectedCarrierQuote, setSelectedCarrierQuote] = useState<string>("");
+  const [selectedEscortQuote, setSelectedEscortQuote] = useState<string>("");
+  const [isAssigning, setIsAssigning] = useState(false);
+  const [viewProviderId, setViewProviderId] = useState<string | null>(null);
+  const [profileDialogOpen, setProfileDialogOpen] = useState(false);
 
   useEffect(() => {
-    fetchQuotes();
+    fetchUnmatchedBookings();
   }, []);
 
-  const fetchQuotes = async () => {
+  const fetchUnmatchedBookings = async () => {
     setLoading(true);
     try {
-      // We need a route to fetch ALL quotes for admin
-      const response = await api.get("/quotes/all-admin");
+      const response = await api.get("/admin/unmatched-bookings");
       if (response.data.success) {
-        setQuotes(response.data.data);
+        setBookings(response.data.data);
       }
     } catch (error) {
-      console.error("Fetch quotes error:", error);
-      toast.error("Failed to load quotes");
+      toast.error("Failed to load unmatched bookings");
     } finally {
       setLoading(false);
     }
   };
 
-  const handleApproveQuote = async (quote: any) => {
-    setIsProcessing(true);
+  const handleViewDetails = async (booking: any) => {
+    setSelectedBooking(booking);
+    setDetailsOpen(true);
+    setLoadingQuotes(true);
+    setSelectedCarrierQuote("");
+    setSelectedEscortQuote("");
     try {
-      const response = await api.put(`/quotes/${quote.id}/accept`);
+      const response = await api.get(`/quotes/booking/${booking.id}`);
       if (response.data.success) {
-        toast.success("Quote approved and booking updated!");
-        setDetailsOpen(false);
-        fetchQuotes();
+        setQuotes(response.data.data);
       }
-    } catch (error: any) {
-      toast.error(error.response?.data?.message || "Failed to approve quote");
+    } catch (error) {
+      toast.error("Failed to load quotes for this booking");
     } finally {
-      setIsProcessing(false);
+      setLoadingQuotes(false);
     }
   };
 
-  const filteredQuotes = quotes.filter(quote => {
-    const matchesSearch =
-      (quote.carrier_name || '').toLowerCase().includes(searchTerm.toLowerCase()) ||
-      quote.booking_id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      (quote.shipper_name || '').toLowerCase().includes(searchTerm.toLowerCase());
+  const handleAssign = async () => {
+    if (!selectedBooking || !selectedCarrierQuote) {
+      toast.error("Please select a carrier quote");
+      return;
+    }
 
-    const matchesStatus = statusFilter === "all" || quote.status === statusFilter;
+    if (selectedBooking.requires_escort && !selectedEscortQuote) {
+      if (!confirm("This booking requires an escort but none is selected. Proceed anyway?")) {
+        return;
+      }
+    }
 
-    return matchesSearch && matchesStatus;
-  });
+    setIsAssigning(true);
+    try {
+      const response = await api.post("/admin/assign-providers", {
+        booking_id: selectedBooking.id,
+        carrier_quote_id: selectedCarrierQuote,
+        escort_quote_id: selectedEscortQuote || null
+      });
 
-  const pendingQuotes = filteredQuotes.filter(q => q.status === "pending");
-  const acceptedQuotes = filteredQuotes.filter(q => q.status === "accepted");
-  const rejectedQuotes = filteredQuotes.filter(q => q.status === "rejected");
-
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString();
+      if (response.data.success) {
+        toast.success("Providers assigned successfully!");
+        setDetailsOpen(false);
+        fetchUnmatchedBookings();
+      }
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || "Failed to assign providers");
+    } finally {
+      setIsAssigning(false);
+    }
   };
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD'
-    }).format(amount);
-  };
-
-  const QuoteCard = ({ quote }: { quote: any }) => (
-    <Card
-      className="cursor-pointer hover:border-primary transition-colors border shadow-sm"
-      onClick={() => {
-        setSelectedQuote(quote);
-        setDetailsOpen(true);
-      }}
-    >
-      <CardContent className="p-5">
-        <div className="flex items-start justify-between mb-4">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-primary/10 rounded-lg">
-              <Truck className="h-5 w-5 text-primary" />
-            </div>
-            <div>
-              <p className="font-bold text-base">{quote.carrier_name}</p>
-              <p className="text-xs text-muted-foreground">Carrier Bid</p>
-            </div>
-          </div>
-          <div className="text-right">
-            <p className="text-xl font-bold text-primary">{formatCurrency(quote.amount)}</p>
-          </div>
-        </div>
-
-        <div className="space-y-2.5 text-sm">
-          <div className="flex items-center gap-2 text-muted-foreground">
-            <Package className="h-4 w-4 shrink-0" />
-            <span className="truncate">Booking: <span className="font-mono">{quote.booking_id.split('-')[0]}...</span></span>
-          </div>
-          <div className="flex items-center gap-2 text-muted-foreground">
-            <MapPin className="h-4 w-4 shrink-0" />
-            <span className="truncate font-medium text-foreground">{quote.pickup_city} → {quote.delivery_city}</span>
-          </div>
-          <div className="flex items-center gap-2 text-muted-foreground">
-            <Calendar className="h-4 w-4 shrink-0" />
-            <span>Submitted: {formatDate(quote.created_at)}</span>
-          </div>
-        </div>
-
-        <div className="flex items-center justify-between mt-5 pt-4 border-t">
-          <span className="text-xs text-muted-foreground font-medium">For: {quote.shipper_name}</span>
-          <Badge variant={
-            quote.status === "accepted" ? "default" :
-              quote.status === "rejected" ? "destructive" : "outline"
-          } className="capitalize">
-            {quote.status}
-          </Badge>
-        </div>
-      </CardContent>
-    </Card>
+  const filteredBookings = bookings.filter(b =>
+    b.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    b.shipper_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    b.cargo_type?.toLowerCase().includes(searchTerm.toLowerCase())
   );
+
+  const carrierQuotes = quotes.filter(q => q.role === 'carrier');
+  const escortQuotes = quotes.filter(q => q.role === 'escort');
 
   return (
     <div className="space-y-6">
-      <div>
-        <h1 className="text-3xl font-display font-bold">Quote Management</h1>
-        <p className="text-muted-foreground">Match carrier bids with shipper booking requests</p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-3xl font-bold">Match Center</h1>
+          <p className="text-muted-foreground">Assign providers to pending load requests</p>
+        </div>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        <Card className="border-b-4 border-b-primary">
-          <CardContent className="p-6">
-            <p className="text-sm text-muted-foreground font-bold uppercase tracking-wider">Pending Review</p>
-            <p className="text-3xl font-bold text-primary mt-1">{quotes.filter(q => q.status === "pending").length}</p>
-          </CardContent>
-        </Card>
-        <Card className="border-b-4 border-b-green-500">
-          <CardContent className="p-6">
-            <p className="text-sm text-muted-foreground font-bold uppercase tracking-wider">Matches Approved</p>
-            <p className="text-3xl font-bold text-green-600 mt-1">{quotes.filter(q => q.status === "accepted").length}</p>
-          </CardContent>
-        </Card>
-        <Card className="border-b-4 border-b-gray-400">
-          <CardContent className="p-6">
-            <p className="text-sm text-muted-foreground font-bold uppercase tracking-wider">Total Bids</p>
-            <p className="text-3xl font-bold mt-1">{quotes.length}</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Filters */}
-      <Card>
-        <CardContent className="p-4">
-          <div className="flex flex-wrap gap-4">
-            <div className="flex-1 min-w-[250px]">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Search company, booking ID, or shipper..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  className="pl-10 h-11"
-                />
-              </div>
-            </div>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-[180px] h-11">
-                <Filter className="h-4 w-4 mr-2 text-muted-foreground" />
-                <SelectValue placeholder="Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All States</SelectItem>
-                <SelectItem value="pending">Pending Review</SelectItem>
-                <SelectItem value="accepted">Accepted Matches</SelectItem>
-                <SelectItem value="rejected">Rejected Bids</SelectItem>
-              </SelectContent>
-            </Select>
-            <Button variant="outline" className="h-11" onClick={fetchQuotes}>
-              Sync Records
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Quotes Tabs */}
       {loading ? (
-        <div className="flex flex-col items-center justify-center py-20 bg-card border rounded-xl">
-          <Loader2 className="h-10 w-10 animate-spin text-primary mb-4" />
-          <p className="font-medium">Fetching marketplace bids...</p>
+        <div className="flex justify-center py-12">
+          <Loader2 className="h-10 w-10 animate-spin text-primary" />
         </div>
       ) : (
-        <Tabs defaultValue="pending" className="space-y-4">
-          <TabsList className="bg-muted/50 p-1">
-            <TabsTrigger value="pending" className="px-6">Pending ({pendingQuotes.length})</TabsTrigger>
-            <TabsTrigger value="approved" className="px-6">Accepted ({acceptedQuotes.length})</TabsTrigger>
-            <TabsTrigger value="rejected" className="px-6">Rejected ({rejectedQuotes.length})</TabsTrigger>
-          </TabsList>
+        <>
+          {/* Search */}
+          <div className="relative max-w-md">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Search by ID, shipper, or cargo..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              className="pl-10"
+            />
+          </div>
 
-          <TabsContent value="pending">
-            {pendingQuotes.length === 0 ? (
-              <Card className="bg-muted/10 border-dashed">
-                <CardContent className="p-12 text-center text-muted-foreground">
-                  <Clock className="h-12 w-12 mx-auto mb-4 opacity-20" />
-                  <p className="text-lg font-medium">All caught up!</p>
-                  <p>No new quotes require review at this time.</p>
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {filteredBookings.length === 0 ? (
+              <div className="col-span-full py-20 text-center bg-card border rounded-2xl border-dashed">
+                <Package className="h-12 w-12 mx-auto text-muted-foreground opacity-20 mb-4" />
+                <p className="text-lg font-medium text-muted-foreground">No bookings awaiting assignment</p>
+              </div>
+            ) : filteredBookings.map((booking) => (
+              <Card key={booking.id} className="overflow-hidden hover:shadow-md transition-shadow cursor-pointer" onClick={() => handleViewDetails(booking)}>
+                <CardContent className="p-0">
+                  <div className="bg-primary/5 p-4 border-b">
+                    <div className="flex justify-between items-start">
+                      <Badge variant="outline" className="font-mono text-[10px] mb-2">ID: {booking.id.slice(0, 8)}</Badge>
+                      <Badge className="bg-blue-100 text-blue-800 border-0">{booking.status}</Badge>
+                    </div>
+                    <h3 className="font-bold text-lg">{booking.cargo_type}</h3>
+                    <p className="text-sm text-muted-foreground">Shipper: {booking.shipper_name}</p>
+                  </div>
+                  <div className="p-4 space-y-3">
+                    <div className="flex items-center text-sm text-muted-foreground">
+                      <MapPin className="h-4 w-4 mr-2 shrink-0" />
+                      <span className="truncate">{booking.pickup_city}, {booking.pickup_state} → {booking.delivery_city}</span>
+                    </div>
+                    <div className="flex items-center text-sm text-muted-foreground">
+                      <Calendar className="h-4 w-4 mr-2 shrink-0" />
+                      <span>{new Date(booking.shipment_date).toLocaleDateString()}</span>
+                    </div>
+
+                    <div className="pt-3 border-t flex justify-between items-center">
+                      <div className="flex gap-2">
+                        <div className="flex items-center text-xs">
+                          <Truck className="h-3 w-3 mr-1 text-primary" />
+                          <span className="font-bold">{booking.carrier_quote_count || 0}</span>
+                        </div>
+                        {booking.requires_escort && (
+                          <div className="flex items-center text-xs">
+                            <Car className="h-3 w-3 mr-1 text-purple-600" />
+                            <span className="font-bold">{booking.escort_quote_count || 0}</span>
+                          </div>
+                        )}
+                      </div>
+                      <Button variant="ghost" size="sm" className="h-8 text-primary">
+                        Details <ChevronRight className="h-4 w-4 ml-1" />
+                      </Button>
+                    </div>
+                  </div>
                 </CardContent>
               </Card>
-            ) : (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {pendingQuotes.map(quote => <QuoteCard key={quote.id} quote={quote} />)}
-              </div>
-            )}
-          </TabsContent>
-
-          <TabsContent value="approved">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {acceptedQuotes.map(quote => <QuoteCard key={quote.id} quote={quote} />)}
-            </div>
-          </TabsContent>
-
-          <TabsContent value="rejected">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {rejectedQuotes.map(quote => <QuoteCard key={quote.id} quote={quote} />)}
-            </div>
-          </TabsContent>
-        </Tabs>
+            ))}
+          </div>
+        </>
       )}
 
-      {/* Detail View */}
+      {/* Assignment Dialog */}
       <Dialog open={detailsOpen} onOpenChange={setDetailsOpen}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle className="text-2xl font-display flex items-center gap-2">
-              Review Bid Match
+        <DialogContent className="max-w-5xl max-h-[90vh] flex flex-col p-0">
+          <DialogHeader className="p-6 border-b">
+            <DialogTitle className="text-2xl flex items-center gap-2">
+              <Info className="h-6 w-6 text-primary" /> Match Assignment
             </DialogTitle>
+            <DialogDescription className="sr-only">
+              Assign a carrier and optionally an escort to this booking.
+            </DialogDescription>
           </DialogHeader>
 
-          {selectedQuote && (
-            <div className="space-y-6">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="p-4 bg-primary/5 rounded-xl border border-primary/10">
-                  <p className="text-xs font-bold text-primary uppercase">Carrier Bid</p>
-                  <p className="text-2xl font-bold mt-1">{formatCurrency(selectedQuote.amount)}</p>
-                  <p className="text-sm font-medium mt-2">{selectedQuote.carrier_name}</p>
+          <div className="flex-1 overflow-y-auto p-6 space-y-8">
+            {/* Full Booking Details */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 bg-muted/30 p-6 rounded-xl border">
+              <div className="space-y-4">
+                <div>
+                  <p className="text-xs text-muted-foreground uppercase font-bold tracking-wider mb-1">Cargo Information</p>
+                  <h4 className="font-bold text-lg leading-tight">{selectedBooking?.cargo_type}</h4>
+                  <p className="text-sm text-balance italic mt-1 text-muted-foreground">{selectedBooking?.cargo_description}</p>
+
+                  <div className="grid grid-cols-2 gap-3 mt-3">
+                    <div className="bg-background p-3 rounded-lg border shadow-sm">
+                      <span className="text-[10px] text-muted-foreground uppercase font-bold block mb-1">Dimensions</span>
+                      <span className="text-sm font-bold">{selectedBooking?.dimensions_length_ft}'L x {selectedBooking?.dimensions_width_ft}'W x {selectedBooking?.dimensions_height_ft}'H</span>
+                    </div>
+                    <div className="bg-background p-3 rounded-lg border shadow-sm">
+                      <span className="text-[10px] text-muted-foreground uppercase font-bold block mb-1">Weight</span>
+                      <span className="text-sm font-bold">{selectedBooking?.weight_lbs?.toLocaleString()} lbs</span>
+                    </div>
+                  </div>
                 </div>
-                <div className="p-4 bg-muted/50 rounded-xl border">
-                  <p className="text-xs font-bold text-muted-foreground uppercase">Requested Load</p>
-                  <p className="text-lg font-bold mt-1 truncate">{selectedQuote.cargo_type}</p>
-                  <p className="text-sm text-muted-foreground mt-2">ID: {selectedQuote.booking_id.split('-')[0]}...</p>
+
+                <div>
+                  <p className="text-xs text-muted-foreground uppercase font-bold tracking-wider mb-1">Customer / Shipper</p>
+                  <div className="bg-primary/5 p-4 rounded-xl border border-primary/20">
+                    <h5 className="font-black text-primary text-lg leading-none">{selectedBooking?.shipper_name}</h5>
+                    <p className="text-sm font-bold text-foreground mt-1">{selectedBooking?.shipper_company || 'Independent Shipper'}</p>
+                  </div>
+                </div>
+
+                <div>
+                  <p className="text-xs text-muted-foreground uppercase font-bold tracking-wider mb-2">Service Requirements</p>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedBooking?.requires_escort ? (
+                      <Badge className="bg-purple-100 text-purple-800 border-0">High-Heavy Escort Required</Badge>
+                    ) : (
+                      <Badge variant="outline">Standard Escort Not Required</Badge>
+                    )}
+                  </div>
                 </div>
               </div>
 
-              <div className="space-y-3">
-                <h4 className="font-bold flex items-center gap-2 text-sm uppercase tracking-wider text-muted-foreground">
-                  <MapPin size={14} /> Logistics Information
-                </h4>
-                <div className="grid grid-cols-2 gap-x-8 gap-y-4 p-4 bg-muted/30 rounded-lg">
-                  <div>
-                    <p className="text-xs text-muted-foreground">Origin</p>
-                    <p className="font-medium text-sm">{selectedQuote.pickup_city}, {selectedQuote.pickup_state}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Destination</p>
-                    <p className="font-medium text-sm">{selectedQuote.delivery_city}, {selectedQuote.delivery_state}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Shipment Date</p>
-                    <p className="font-medium text-sm">{formatDate(selectedQuote.shipment_date)}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">Shipper</p>
-                    <p className="font-medium text-sm underline">{selectedQuote.shipper_name}</p>
+              <div className="space-y-4">
+                <div>
+                  <p className="text-xs text-muted-foreground uppercase font-bold tracking-wider mb-2">Logistics & Route</p>
+                  <div className="space-y-4 relative">
+                    <div className="absolute left-[7px] top-[14px] bottom-[14px] w-[2px] bg-muted-foreground/20 border-dashed" />
+
+                    <div className="flex gap-3 relative z-10">
+                      <div className="h-4 w-4 rounded-full bg-green-500 border-2 border-background shadow-sm" />
+                      <div>
+                        <p className="text-[10px] font-bold uppercase text-green-600 leading-none mb-1">Pickup Point</p>
+                        <p className="text-sm font-bold">{selectedBooking?.pickup_address}</p>
+                        <p className="text-xs text-muted-foreground">{selectedBooking?.pickup_city}, {selectedBooking?.pickup_state}</p>
+                      </div>
+                    </div>
+
+                    <div className="flex gap-3 relative z-10">
+                      <div className="h-4 w-4 rounded-full bg-red-500 border-2 border-background shadow-sm" />
+                      <div>
+                        <p className="text-[10px] font-bold uppercase text-red-600 leading-none mb-1">Delivery Destination</p>
+                        <p className="text-sm font-bold">{selectedBooking?.delivery_address}</p>
+                        <p className="text-xs text-muted-foreground">{selectedBooking?.delivery_city}, {selectedBooking?.delivery_state}</p>
+                      </div>
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              {selectedQuote.notes && (
-                <div className="p-4 bg-yellow-50/50 border border-yellow-200 rounded-lg">
-                  <p className="text-xs font-bold text-yellow-800 uppercase mb-2">Carrier Notes</p>
-                  <p className="text-sm italic">"{selectedQuote.notes}"</p>
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-xs text-muted-foreground uppercase font-bold tracking-wider mb-1">Shipment Date</p>
+                    <div className="flex items-center gap-2 text-sm font-bold">
+                      <Calendar className="h-4 w-4 text-primary" />
+                      {selectedBooking && new Date(selectedBooking.shipment_date).toLocaleDateString()}
+                    </div>
+                  </div>
+                  {selectedBooking?.flexible_dates ? (
+                    <div>
+                      <p className="text-xs text-muted-foreground uppercase font-bold tracking-wider mb-1">Flexibility</p>
+                      <Badge variant="secondary">Date is Flexible</Badge>
+                    </div>
+                  ) : null}
                 </div>
-              )}
 
-              <div className="flex items-center justify-between pt-6 border-t">
-                <Badge variant={selectedQuote.status === "accepted" ? "default" : "outline"} className="px-3 py-1">
-                  Status: {selectedQuote.status}
-                </Badge>
-
-                {selectedQuote.status === "pending" && (
-                  <div className="flex gap-3">
-                    <Button variant="outline" onClick={() => setDetailsOpen(false)} disabled={isProcessing}>Close</Button>
-                    <Button
-                      className="bg-green-600 hover:bg-green-700 font-bold"
-                      onClick={() => handleApproveQuote(selectedQuote)}
-                      disabled={isProcessing}
-                    >
-                      {isProcessing ? <Loader2 className="mr-2 animate-spin" size={16} /> : <Check className="mr-2" size={16} />}
-                      Approve Match
-                    </Button>
+                {selectedBooking?.special_instructions && (
+                  <div className="bg-amber-50 p-3 rounded-lg border border-amber-100">
+                    <p className="text-[10px] text-amber-700 uppercase font-black mb-1">⚠️ Special Instructions</p>
+                    <p className="text-xs italic text-amber-900 leading-relaxed">{selectedBooking.special_instructions}</p>
                   </div>
                 )}
               </div>
             </div>
-          )}
+
+            {/* Carrier Quotes Section */}
+            <div>
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-lg font-bold flex items-center gap-2">
+                  <Truck className="h-5 w-5 text-primary" /> Carrier Bids ({carrierQuotes.length})
+                </h3>
+              </div>
+              <div className="space-y-3">
+                {carrierQuotes.length === 0 ? (
+                  <div className="p-8 text-center text-muted-foreground bg-muted/10 border border-dashed rounded-lg">
+                    No carrier bids submitted yet.
+                  </div>
+                ) : (
+                  <div className="grid grid-cols-1 gap-3">
+                    {carrierQuotes.map((quote) => (
+                      <div
+                        key={quote.id}
+                        className={`p-4 border rounded-xl flex items-center justify-between cursor-pointer transition-all ${selectedCarrierQuote === quote.id ? 'border-primary bg-primary/5 ring-1 ring-primary' : 'hover:bg-muted/50'
+                          }`}
+                        onClick={() => setSelectedCarrierQuote(quote.id)}
+                      >
+                        <div className="flex items-center gap-4">
+                          <div className={`h-4 w-4 rounded-full border-2 flex items-center justify-center ${selectedCarrierQuote === quote.id ? 'border-primary' : 'border-muted-foreground/30'}`}>
+                            {selectedCarrierQuote === quote.id && <div className="h-2 w-2 rounded-full bg-primary" />}
+                          </div>
+                          <div>
+                            <p className="font-bold">{quote.carrier_name}</p>
+                            <p className="text-xs text-muted-foreground">{quote.company_name} • Driver: {quote.driver_name || 'Not specified'}</p>
+                            {quote.notes && <p className="text-xs italic mt-1 text-muted-foreground">"{quote.notes}"</p>}
+                            <Button
+                              variant="link"
+                              size="sm"
+                              className="h-auto p-0 text-xs mt-1"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setViewProviderId(quote.provider_id);
+                                setProfileDialogOpen(true);
+                              }}
+                            >
+                              <User className="h-3 w-3 mr-1" /> View Full Profile
+                            </Button>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-xl font-black text-primary">${parseFloat(quote.amount).toLocaleString()}</p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Escort Quotes Section */}
+            {selectedBooking?.requires_escort && (
+              <div>
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-lg font-bold flex items-center gap-2">
+                    <Car className="h-5 w-5 text-purple-600" /> Escort Bids ({escortQuotes.length})
+                  </h3>
+                </div>
+                <div className="space-y-3">
+                  {escortQuotes.length === 0 ? (
+                    <div className="p-8 text-center text-muted-foreground bg-muted/10 border border-dashed rounded-lg">
+                      No escort bids submitted yet.
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 gap-3">
+                      {escortQuotes.map((quote) => (
+                        <div
+                          key={quote.id}
+                          className={`p-4 border rounded-xl flex items-center justify-between cursor-pointer transition-all ${selectedEscortQuote === quote.id ? 'border-purple-600 bg-purple-50 ring-1 ring-purple-600' : 'hover:bg-muted/50'
+                            }`}
+                          onClick={() => setSelectedEscortQuote(quote.id)}
+                        >
+                          <div className="flex items-center gap-4">
+                            <div className={`h-4 w-4 rounded-full border-2 flex items-center justify-center ${selectedEscortQuote === quote.id ? 'border-purple-600' : 'border-muted-foreground/30'}`}>
+                              {selectedEscortQuote === quote.id && <div className="h-2 w-2 rounded-full bg-purple-600" />}
+                            </div>
+                            <div>
+                              <p className="font-bold">{quote.carrier_name}</p>
+                              <p className="text-xs text-muted-foreground">{quote.company_name} • Experience: {quote.years_experience || 'N/A'} yrs</p>
+                              {quote.notes && <p className="text-xs italic mt-1 text-muted-foreground">"{quote.notes}"</p>}
+                              <Button
+                                variant="link"
+                                size="sm"
+                                className="h-auto p-0 text-xs mt-1 text-purple-600 hover:text-purple-700"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setViewProviderId(quote.provider_id);
+                                  setProfileDialogOpen(true);
+                                }}
+                              >
+                                <User className="h-3 w-3 mr-1" /> View Full Profile
+                              </Button>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-xl font-black text-purple-600">${parseFloat(quote.amount).toLocaleString()}</p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+
+          <DialogFooter className="p-6 border-t bg-muted/10 gap-4">
+            <div className="mr-auto text-left">
+              <p className="text-xs text-muted-foreground uppercase font-bold tracking-wider">Total Match Price</p>
+              <p className="text-2xl font-black text-foreground">
+                ${(
+                  (selectedCarrierQuote ? parseFloat(carrierQuotes.find(q => q.id === selectedCarrierQuote)?.amount || 0) : 0) +
+                  (selectedEscortQuote ? parseFloat(escortQuotes.find(q => q.id === selectedEscortQuote)?.amount || 0) : 0)
+                ).toLocaleString()}
+              </p>
+            </div>
+            <Button variant="outline" onClick={() => setDetailsOpen(false)} disabled={isAssigning}>Cancel</Button>
+            <Button
+              className="bg-green-600 hover:bg-green-700 h-12 px-8 font-bold"
+              onClick={handleAssign}
+              disabled={isAssigning || !selectedCarrierQuote}
+            >
+              {isAssigning ? <Loader2 className="mr-2 animate-spin h-5 w-5" /> : <CheckCircle2 className="mr-2 h-5 w-5" />}
+              Assign & Book Shipment
+            </Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      <ProviderProfileDialog
+        providerId={viewProviderId}
+        open={profileDialogOpen}
+        onOpenChange={setProfileDialogOpen}
+      />
     </div>
   );
 };

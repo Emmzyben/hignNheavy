@@ -10,6 +10,8 @@ CREATE TABLE users (
     password_hash VARCHAR(255) NOT NULL,
     full_name VARCHAR(100) NOT NULL,
     role VARCHAR(50) NOT NULL CHECK (role IN ('shipper', 'carrier', 'escort', 'admin', 'driver')),
+    status ENUM('active', 'disabled') DEFAULT 'active',
+    email_notifications BOOLEAN DEFAULT TRUE,
     profile_completed BOOLEAN DEFAULT FALSE,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP

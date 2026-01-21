@@ -1,38 +1,70 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSearchParams } from "react-router-dom";
 import AvailableBookings from "@/components/dashboard/escort/AvailableBookings";
 import VehiclesManagement from "@/components/dashboard/escort/VehiclesManagement";
-import PricingSettings from "@/components/dashboard/escort/PricingSettings";
+
 import EscortPayouts from "@/components/dashboard/escort/EscortPayouts";
 import EscortWallet from "@/components/dashboard/escort/EscortWallet";
-import EscortMessaging from "@/components/dashboard/escort/EscortMessaging";
+import MessagingSection from "@/components/dashboard/MessagingSection";
+import ProviderReviews from "@/components/dashboard/ProviderReviews";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 
-type TabType = 'available' | 'vehicles' | 'pricing' | 'payouts' | 'wallet' | 'messages';
+type TabType = 'available' | 'vehicles' | 'payouts' | 'wallet' | 'messages' | 'reviews';
 
 const EscortDashboard = () => {
-  const [activeSection, setActiveSection] = useState<TabType>("available");
+  const [searchParams, setSearchParams] = useSearchParams();
+  const [activeSection, setActiveSection] = useState<TabType>(
+    (searchParams.get("section") as TabType) || "available"
+  );
+  const [chatContext, setChatContext] = useState<{ bookingId: string | null; participantId: string } | null>(null);
 
-  const renderContent = () => {
+  useEffect(() => {
+    const section = searchParams.get("section");
+    if (section) {
+      setActiveSection(section as TabType);
+    }
+  }, [searchParams]);
+
+  const handleSectionChange = (section: string) => {
+    setActiveSection(section as TabType);
+    setSearchParams({ section });
+  };
+
+  const handleStartChat = (participantId: string, bookingId: string | null = null) => {
+    setChatContext({ bookingId, participantId });
+    setActiveSection("messages");
+    setSearchParams({ section: "messages" });
+  };
+
+  const renderContent = (): JSX.Element => {
     switch (activeSection) {
       case "available":
-        return <AvailableBookings />;
+        return <AvailableBookings onMessage={handleStartChat} />;
       case "vehicles":
         return <VehiclesManagement />;
-      case "pricing":
-        return <PricingSettings />;
+
       case "payouts":
         return <EscortPayouts />;
       case "wallet":
         return <EscortWallet />;
       case "messages":
-        return <EscortMessaging />;
+        return <MessagingSection
+          initialContext={chatContext}
+          initialConversationId={searchParams.get("conversationId")}
+        />;
+      case "reviews":
+        return <ProviderReviews />;
       default:
-        return <AvailableBookings />;
+        return <AvailableBookings onMessage={handleStartChat} />;
     }
   };
 
   return (
-    <DashboardLayout activeSection={activeSection} onSectionChange={(section) => setActiveSection(section as TabType)}>
+    <DashboardLayout
+      activeSection={activeSection}
+      onSectionChange={handleSectionChange}
+      onMessage={handleStartChat}
+    >
       {renderContent()}
     </DashboardLayout>
   );

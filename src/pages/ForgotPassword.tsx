@@ -7,17 +7,26 @@ import { Link } from "react-router-dom";
 import { useState } from "react";
 import heroImage from "@/assets/hero.svg";
 import { toast } from "sonner";
+import api from "@/lib/api";
 
 const ForgotPassword = () => {
     const [email, setEmail] = useState("");
     const [isSubmitted, setIsSubmitted] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-        // Handle password reset logic here
-        console.log("Reset password for:", email);
-        setIsSubmitted(true);
-        toast.success("Reset link sent to your email!");
+        setIsLoading(true);
+        try {
+            await api.post("/auth/forgot-password", { email });
+            setIsSubmitted(true);
+            toast.success("Reset link sent to your email!");
+        } catch (error: any) {
+            toast.error(error.response?.data?.message || "Failed to send reset link.");
+            setIsSubmitted(true);
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     return (
@@ -61,8 +70,15 @@ const ForgotPassword = () => {
                                     />
                                 </div>
 
-                                <Button type="submit" size="lg" className="w-full">
-                                    Send Reset Link
+                                <Button type="submit" size="lg" className="w-full" disabled={isLoading}>
+                                    {isLoading ? (
+                                        <div className="flex items-center gap-2">
+                                            <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
+                                            <span>Sending...</span>
+                                        </div>
+                                    ) : (
+                                        "Send Reset Link"
+                                    )}
                                 </Button>
                             </form>
                         ) : (

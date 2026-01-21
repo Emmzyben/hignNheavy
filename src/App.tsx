@@ -17,6 +17,10 @@ import ForgotPassword from "./pages/ForgotPassword";
 import EscortDashboard from "./pages/dashboard/EscortDashboard";
 import AdminDashboard from "./pages/dashboard/AdminDashboard";
 import Profile from "./pages/dashboard/Profile";
+import Notifications from "./pages/dashboard/Notifications";
+import VerifyEmail from "./pages/VerifyEmail";
+import ResetPassword from "./pages/ResetPassword";
+import VerificationPending from "./pages/VerificationPending";
 
 import ProtectedRoute from "./components/ProtectedRoute";
 
@@ -37,12 +41,24 @@ const App = () => (
           <Route path="/signin" element={<SignIn />} />
           <Route path="/signup" element={<SignUp />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/verify-email" element={<VerifyEmail />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
+          <Route path="/verification-pending" element={<VerificationPending />} />
 
           <Route
             path="/dashboard/profile"
             element={
               <ProtectedRoute allowedRoles={['shipper', 'carrier', 'escort', 'admin']}>
                 <Profile />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/dashboard/notifications"
+            element={
+              <ProtectedRoute allowedRoles={['shipper', 'carrier', 'escort', 'admin']}>
+                <Notifications />
               </ProtectedRoute>
             }
           />

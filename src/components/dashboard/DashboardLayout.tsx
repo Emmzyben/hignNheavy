@@ -10,11 +10,13 @@ import {
 } from "lucide-react";
 import logo from "@/assets/logo.svg";
 import { toast } from "sonner";
+import NotificationBell from "./NotificationBell";
 
 interface DashboardLayoutProps {
     children: React.ReactNode;
     activeSection?: string;
     onSectionChange?: (section: string) => void;
+    onMessage?: (participantId: string, bookingId?: string | null) => void;
     menuItemsOverride?: { id: string, label: string, icon: any }[];
 }
 
@@ -31,18 +33,19 @@ const MENU_ITEMS: Record<string, any[]> = {
         { id: 'bookings', label: 'Available Bookings', icon: ClipboardList },
         { id: 'drivers', label: 'Manage Drivers', icon: Users },
         { id: 'equipment', label: 'Equipment', icon: Truck },
-        { id: 'pricing', label: 'Pricing', icon: Settings },
         { id: 'payouts', label: 'Payouts', icon: DollarSign },
         { id: 'wallet', label: 'Wallet', icon: Wallet },
         { id: 'messages', label: 'Messages', icon: MessageSquare },
+        { id: 'reviews', label: 'Reviews', icon: Star },
     ],
     escort: [
         { id: 'available', label: 'Available Jobs', icon: FileText },
         { id: 'vehicles', label: 'My Vehicles', icon: Car },
-        { id: 'pricing', label: 'Pricing', icon: Settings },
+
         { id: 'payouts', label: 'Payouts', icon: DollarSign },
         { id: 'wallet', label: 'Wallet', icon: Wallet },
         { id: 'messages', label: 'Messages', icon: MessageSquare },
+        { id: 'reviews', label: 'Reviews', icon: Star },
     ],
     admin: [
         { id: 'overview', label: 'Overview', icon: LayoutDashboard },
@@ -56,12 +59,18 @@ const MENU_ITEMS: Record<string, any[]> = {
     ]
 };
 
-const DashboardLayout = ({ children, activeSection, onSectionChange, menuItemsOverride }: DashboardLayoutProps) => {
+const DashboardLayout = ({ children, activeSection, onSectionChange, onMessage, menuItemsOverride }: DashboardLayoutProps) => {
     const { user, logout } = useAuth();
     const navigate = useNavigate();
     const location = useLocation();
     const [sidebarOpen, setSidebarOpen] = useState(true);
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+
+    const handleChatAdmin = () => {
+        if (onMessage) {
+            onMessage("admin");
+        }
+    };
 
     const role = user?.role || 'shipper';
     const menuItems = menuItemsOverride || MENU_ITEMS[role] || [];
@@ -124,6 +133,19 @@ const DashboardLayout = ({ children, activeSection, onSectionChange, menuItemsOv
 
             {/* User Section */}
             <div className="p-4 border-t border-border mt-auto space-y-2">
+                {role !== 'admin' && onMessage && (
+                    <Button
+                        variant="ghost"
+                        className={cn(
+                            "w-full justify-start gap-3 text-primary hover:text-primary hover:bg-primary/10 h-10 px-3",
+                            !(sidebarOpen || mobileMenuOpen) && "justify-center px-0"
+                        )}
+                        onClick={handleChatAdmin}
+                    >
+                        <MessageSquare size={20} />
+                        {(sidebarOpen || mobileMenuOpen) && <span className="text-sm font-medium">Chat with Admin</span>}
+                    </Button>
+                )}
                 <Link
                     to="/dashboard/profile"
                     className={cn(
@@ -198,6 +220,9 @@ const DashboardLayout = ({ children, activeSection, onSectionChange, menuItemsOv
                         <img src={logo} alt="logo" className="w-8" />
                         <h2 className="font-display font-black text-primary text-lg">HighnHeavy</h2>
                     </div>
+                    <div className="ml-auto">
+                        <NotificationBell />
+                    </div>
                 </header>
 
                 {/* Top Header - Desktop */}
@@ -216,6 +241,7 @@ const DashboardLayout = ({ children, activeSection, onSectionChange, menuItemsOv
                             Visit Site
                         </Button>
                         <div className="h-10 w-px bg-border mx-2" />
+                        <NotificationBell />
                         <div className="text-right">
                             <p className="text-sm font-bold">{user?.full_name}</p>
                             <p className="text-[10px] text-muted-foreground capitalize font-bold tracking-widest">{user?.role}</p>

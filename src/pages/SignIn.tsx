@@ -10,10 +10,12 @@ import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
 import heroImage from "@/assets/hero.svg";
 import { motion } from "framer-motion";
+import { Eye, EyeOff } from "lucide-react";
 
 const SignIn = () => {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
+    const [showPassword, setShowPassword] = useState(false);
     const [loading, setLoading] = useState(false);
     const { login, user } = useAuth();
     const navigate = useNavigate();
@@ -21,10 +23,29 @@ const SignIn = () => {
     // Redirect if already logged in
     useEffect(() => {
         if (user) {
+            // If user is disabled, send them to dashboard immediately so ProtectedRoute shows the disable modal
+            if (user.status === 'disabled') {
+                const dashboardRoute = {
+                    shipper: '/dashboard/shipper',
+                    carrier: '/dashboard/carrier',
+                    escort: '/dashboard/escort',
+                    admin: '/dashboard/admin',
+                    driver: '/dashboard/driver'
+                }[user.role] || '/';
+                navigate(dashboardRoute, { replace: true });
+                return;
+            }
+
             // Check if profile is incomplete (excluding admin and driver for now)
             if (user.profile_completed === false && !['admin', 'driver'].includes(user.role)) {
                 toast.info("Please complete your profile details to continue.");
                 navigate(`/signup?role=${user.role}`, { replace: true });
+                return;
+            }
+
+            // Check if email is verified (only after profile is complete)
+            if (user.email_verified === false) {
+                navigate('/verification-pending', { replace: true });
                 return;
             }
 
@@ -105,14 +126,23 @@ const SignIn = () => {
                                         Forgot password?
                                     </Link>
                                 </div>
-                                <Input
-                                    id="password"
-                                    type="password"
-                                    value={password}
-                                    onChange={(e) => setPassword(e.target.value)}
-                                    required
-                                    className="bg-background"
-                                />
+                                <div className="relative">
+                                    <Input
+                                        id="password"
+                                        type={showPassword ? "text" : "password"}
+                                        value={password}
+                                        onChange={(e) => setPassword(e.target.value)}
+                                        required
+                                        className="bg-background pr-10"
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowPassword(!showPassword)}
+                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                                    >
+                                        {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                                    </button>
+                                </div>
                             </div>
 
                             <div className="flex items-center space-x-2">
