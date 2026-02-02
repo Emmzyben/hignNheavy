@@ -8,6 +8,10 @@ import {
   XCircle,
   AlertCircle,
   Loader2,
+  Eye,
+  Calendar,
+  Package,
+  ShieldCheck
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -30,6 +34,7 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import api from "@/lib/api";
+import EquipmentImageUploader from "../EquipmentImageUploader";
 
 const vehicleTypes = ["Pickup Truck", "SUV", "Van", "Pilot Car"];
 
@@ -38,6 +43,9 @@ const VehiclesManagement = () => {
   const [loading, setLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
+  const [selectedDetails, setSelectedDetails] = useState<any | null>(null);
+  const [detailsOpen, setDetailsOpen] = useState(false);
+  const [activePhoto, setActivePhoto] = useState(0);
 
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingVehicle, setEditingVehicle] = useState<any | null>(null);
@@ -51,6 +59,7 @@ const VehiclesManagement = () => {
     dimensions: "",
     status: "available",
     last_inspection: "",
+    photos: [] as string[],
   });
 
   useEffect(() => {
@@ -62,7 +71,11 @@ const VehiclesManagement = () => {
     try {
       const response = await api.get('/vehicles');
       if (response.data.success) {
-        setVehicles(response.data.data);
+        const parsedData = response.data.data.map((item: any) => ({
+          ...item,
+          photos: typeof item.photos === 'string' ? JSON.parse(item.photos) : (item.photos || [])
+        }));
+        setVehicles(parsedData);
       }
     } catch (error) {
       console.error('Fetch vehicles error:', error);
@@ -130,6 +143,7 @@ const VehiclesManagement = () => {
       dimensions: "",
       status: "available",
       last_inspection: new Date().toISOString().split('T')[0],
+      photos: [],
     });
     setEditingVehicle(null);
   };
@@ -146,8 +160,15 @@ const VehiclesManagement = () => {
       dimensions: vehicle.dimensions || "",
       status: vehicle.status || "available",
       last_inspection: vehicle.last_inspection ? new Date(vehicle.last_inspection).toISOString().split('T')[0] : "",
+      photos: vehicle.photos || [],
     });
     setDialogOpen(true);
+  };
+
+  const handleOpenDetails = (vehicle: any) => {
+    setSelectedDetails(vehicle);
+    setActivePhoto(0);
+    setDetailsOpen(true);
   };
 
   const getStatusBadge = (status: string) => {
@@ -193,14 +214,30 @@ const VehiclesManagement = () => {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {vehicles.map((vehicle) => (
-            <Card key={vehicle.id} className="hover:border-primary/50 transition-all border shadow-sm group">
+            <Card key={vehicle.id} className="hover:border-primary/50 transition-all border shadow-sm group overflow-hidden flex flex-col">
+              {vehicle.photos && vehicle.photos.length > 0 && (
+                <div className="h-40 w-full overflow-hidden border-b">
+                  <img src={vehicle.photos[0]} alt={vehicle.name} className="w-full h-full object-cover" />
+                </div>
+              )}
               <CardHeader className="pb-3 border-b bg-muted/30">
                 <div className="flex items-start justify-between">
-                  <div>
-                    <CardTitle className="text-lg font-bold">{vehicle.name}</CardTitle>
-                    <p className="text-xs text-muted-foreground uppercase font-bold tracking-widest">{vehicle.type} {vehicle.year && `• ${vehicle.year}`}</p>
+                  <div
+                    className="p-2 bg-primary/10 rounded-lg cursor-pointer hover:bg-primary/20 transition-colors"
+                    onClick={() => handleOpenDetails(vehicle)}
+                  >
+                    <Car className="h-5 w-5 text-primary" />
                   </div>
-                  {getStatusBadge(vehicle.status)}
+                  <div className="flex-1 px-3 min-w-0">
+                    <CardTitle className="text-lg font-bold truncate">{vehicle.name}</CardTitle>
+                    <p className="text-xs text-muted-foreground uppercase font-bold tracking-widest truncate">{vehicle.type}</p>
+                  </div>
+                  <div className="flex gap-1 items-center shrink-0">
+                    <Button size="icon" variant="ghost" onClick={() => handleOpenDetails(vehicle)} title="View Details">
+                      <Eye className="h-4 w-4 text-primary" />
+                    </Button>
+                    {getStatusBadge(vehicle.status)}
+                  </div>
                 </div>
               </CardHeader>
               <CardContent className="space-y-4 pt-4">
@@ -244,11 +281,12 @@ const VehiclesManagement = () => {
             </Card>
           ))}
         </div>
-      )}
+      )
+      }
 
       {/* Add/Edit Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>{editingVehicle ? "Update Escort Vehicle" : "Add Escort Vehicle"}</DialogTitle>
           </DialogHeader>
@@ -329,6 +367,15 @@ const VehiclesManagement = () => {
                 onChange={(e) => setFormData({ ...formData, last_inspection: e.target.value })}
               />
             </div>
+
+            <div className="space-y-2">
+              <Label>Vehicle Photos ({formData.photos.length}/5)</Label>
+              <EquipmentImageUploader
+                images={formData.photos}
+                onImagesChange={(photos) => setFormData({ ...formData, photos })}
+                maxImages={5}
+              />
+            </div>
           </div>
 
           <DialogFooter>
@@ -336,6 +383,108 @@ const VehiclesManagement = () => {
             <Button onClick={handleSave} disabled={isSaving}>
               {isSaving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
               {editingVehicle ? "Save Changes" : "Register Vehicle"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Details View Dialog */}
+      <Dialog open={detailsOpen} onOpenChange={setDetailsOpen}>
+        <DialogContent className="max-w-3xl overflow-y-auto max-h-[90vh]">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-display flex items-center gap-2">
+              <Car className="text-primary" />
+              {selectedDetails?.name} Details
+            </DialogTitle>
+          </DialogHeader>
+
+          {selectedDetails && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 py-4">
+              {/* Photo Gallery */}
+              <div className="space-y-4">
+                <div className="aspect-video w-full rounded-2xl overflow-hidden bg-muted border">
+                  {(selectedDetails.photos && (typeof selectedDetails.photos === 'string' ? JSON.parse(selectedDetails.photos) : selectedDetails.photos)).length > 0 ? (
+                    <img
+                      src={(typeof selectedDetails.photos === 'string' ? JSON.parse(selectedDetails.photos) : selectedDetails.photos)[activePhoto]}
+                      alt="Vehicle"
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex flex-col items-center justify-center text-muted-foreground opacity-20">
+                      <Car size={64} />
+                      <p className="mt-2 font-bold">No Photos</p>
+                    </div>
+                  )}
+                </div>
+
+                {(selectedDetails.photos && (typeof selectedDetails.photos === 'string' ? JSON.parse(selectedDetails.photos) : selectedDetails.photos)).length > 1 && (
+                  <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
+                    {(typeof selectedDetails.photos === 'string' ? JSON.parse(selectedDetails.photos) : selectedDetails.photos).map((url: string, i: number) => (
+                      <button
+                        key={i}
+                        onClick={() => setActivePhoto(i)}
+                        className={`w-20 h-20 rounded-lg overflow-hidden border-2 shrink-0 transition-all ${activePhoto === i ? 'border-primary' : 'border-transparent opacity-60'}`}
+                      >
+                        <img src={url} className="w-full h-full object-cover" alt="" />
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Specifications */}
+              <div className="space-y-6">
+                <div className="flex items-center gap-3">
+                  {getStatusBadge(selectedDetails.status)}
+                  <p className="text-xs text-muted-foreground uppercase font-black">ID: {selectedDetails.id.split('-')[0]}</p>
+                </div>
+
+                <div className="grid grid-cols-1 gap-4">
+                  <div className="p-4 bg-muted/30 rounded-xl border border-border">
+                    <p className="text-[10px] text-muted-foreground uppercase font-black mb-1">Vehicle Type</p>
+                    <p className="font-bold flex items-center gap-2">
+                      <Package size={16} className="text-primary" />
+                      {selectedDetails.type}
+                    </p>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="p-4 bg-muted/30 rounded-xl border border-border">
+                      <p className="text-[10px] text-muted-foreground uppercase font-black mb-1">Plate Number</p>
+                      <p className="font-mono font-bold text-primary">{selectedDetails.plate_number}</p>
+                    </div>
+                    <div className="p-4 bg-muted/30 rounded-xl border border-border">
+                      <p className="text-[10px] text-muted-foreground uppercase font-black mb-1">Year</p>
+                      <p className="font-bold">{selectedDetails.year || 'N/A'}</p>
+                    </div>
+                  </div>
+
+                  <div className="p-4 bg-muted/30 rounded-xl border border-border">
+                    <p className="text-[10px] text-muted-foreground uppercase font-black mb-1">VIN Number</p>
+                    <p className="font-mono text-xs">{selectedDetails.vin || 'Not Registered'}</p>
+                  </div>
+
+                  <div className="p-4 bg-primary/5 rounded-xl border border-primary/10 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <ShieldCheck size={20} className="text-primary" />
+                      <div>
+                        <p className="text-[10px] text-muted-foreground uppercase font-black">Last Inspection</p>
+                        <p className="font-bold text-sm">
+                          {selectedDetails.last_inspection ? new Date(selectedDetails.last_inspection).toLocaleDateString() : 'Pending'}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter className="mt-4">
+            <Button variant="outline" onClick={() => setDetailsOpen(false)} className="w-full md:w-auto">Close</Button>
+            <Button onClick={() => { setDetailsOpen(false); openEditDialog(selectedDetails!); }} className="w-full md:w-auto">
+              <Plus className="h-4 w-4 mr-2" />
+              Edit Specification
             </Button>
           </DialogFooter>
         </DialogContent>

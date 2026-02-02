@@ -35,10 +35,23 @@ const ShipperDashboard = () => {
     setSearchParams({ section: "messages" });
   };
 
+  const handleTrack = (bookingId?: string) => {
+    setActiveView("tracking");
+    if (bookingId) {
+      setSearchParams({ section: "tracking", bookingId });
+    } else {
+      setSearchParams({ section: "tracking" });
+    }
+  };
+
   const renderContent = () => {
     switch (activeView) {
       case "bookings":
-        return <BookingsList onTrack={() => setActiveView("tracking")} onMessage={handleStartChat} onReview={() => setActiveView("reviews")} />;
+        return <BookingsList
+          onTrack={handleTrack}
+          onMessage={handleStartChat}
+          onReview={() => setActiveView("reviews")}
+        />;
       case "new-booking":
         return <NewBooking />;
       case "reviews":
@@ -51,9 +64,9 @@ const ShipperDashboard = () => {
           initialConversationId={searchParams.get("conversationId")}
         />;
       case "tracking":
-        return <TrackingSection />;
+        return <TrackingSection initialBookingId={searchParams.get("bookingId")} />;
       default:
-        return <BookingsList onTrack={() => setActiveView("tracking")} onMessage={handleStartChat} />;
+        return <BookingsList onTrack={handleTrack} onMessage={handleStartChat} />;
     }
   };
 

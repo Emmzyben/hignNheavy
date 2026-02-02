@@ -12,6 +12,11 @@ import {
   Loader2,
   User,
   MessageSquare,
+  ExternalLink,
+  Camera,
+  Pencil,
+  Eye,
+  FileCheck,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -35,6 +40,7 @@ import {
 } from "@/components/ui/select";
 import { toast } from "sonner";
 import api from "@/lib/api";
+import ProviderProfileDialog from "../admin/ProviderProfileDialog";
 
 type BookingTab = 'available' | 'my-quotes' | 'won-jobs';
 
@@ -55,6 +61,8 @@ const AvailableBookings: React.FC<AvailableBookingsProps> = ({ onMessage }) => {
   const [quotePrice, setQuotePrice] = useState('');
   const [quoteNotes, setQuoteNotes] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [shipperProfileOpen, setShipperProfileOpen] = useState(false);
+  const [selectedShipperId, setSelectedShipperId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchBookings();
@@ -153,6 +161,11 @@ const AvailableBookings: React.FC<AvailableBookingsProps> = ({ onMessage }) => {
     setDetailsDialogOpen(true);
   };
 
+  const handleOpenShipperProfile = (shipperId: string) => {
+    setSelectedShipperId(shipperId);
+    setShipperProfileOpen(true);
+  };
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'pending': return <Badge className="bg-yellow-500/20 text-yellow-600 border-0"><Clock size={12} className="mr-1" /> Pending</Badge>;
@@ -227,7 +240,13 @@ const AvailableBookings: React.FC<AvailableBookingsProps> = ({ onMessage }) => {
                   <div className="space-y-4 flex-1">
                     <div className="flex items-center gap-3">
                       <Badge variant="outline" className="font-mono">{booking.id.split('-')[0]}...</Badge>
-                      <span className="text-sm text-muted-foreground">Shipper: {booking.shipper_name}</span>
+                      <button
+                        onClick={() => handleOpenShipperProfile(booking.shipper_id)}
+                        className="text-sm text-muted-foreground hover:text-primary hover:underline flex items-center gap-1"
+                      >
+                        Shipper: {booking.shipper_name}
+                        <ExternalLink size={12} />
+                      </button>
                       <Badge className="bg-orange-500/10 text-orange-600 border-0">Escort Required</Badge>
                       {activeTab === 'my-quotes' && getStatusBadge(booking.quote_status)}
                     </div>
@@ -376,11 +395,98 @@ const AvailableBookings: React.FC<AvailableBookingsProps> = ({ onMessage }) => {
                   </p>
                 </div>
 
-                <div className="flex items-center gap-2 pt-2">
-                  <User className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm font-medium">Shipper: {selectedBooking.shipper_name}</span>
+                <div className="pt-2">
+                  <h4 className="text-sm font-bold text-muted-foreground uppercase mb-2">Shipper Contacts</h4>
+                  <button
+                    onClick={() => handleOpenShipperProfile(selectedBooking.shipper_id)}
+                    className="flex items-center gap-2 group transition-colors"
+                  >
+                    <div className="p-1.5 bg-primary/10 rounded-full group-hover:bg-primary/20">
+                      <User className="h-4 w-4 text-primary" />
+                    </div>
+                    <span className="text-sm font-medium group-hover:text-primary group-hover:underline">{selectedBooking.shipper_name}</span>
+                    <ExternalLink size={14} className="text-muted-foreground group-hover:text-primary" />
+                  </button>
                 </div>
               </div>
+
+              {(selectedBooking.status === 'delivered' || selectedBooking.status === 'completed') && (
+                <div className="mt-4 border-t pt-4 space-y-4">
+                  <div className="flex items-center gap-2 mb-2">
+                    <div className="p-2 bg-green-100 rounded-lg">
+                      <FileCheck className="text-green-600" size={18} />
+                    </div>
+                    <h4 className="font-bold text-sm">Delivery Proof</h4>
+                  </div>
+
+                  {selectedBooking.delivery_photos && (
+                    <div className="space-y-2">
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                        <Camera size={12} /> Delivery Photos
+                      </p>
+                      <div className="grid grid-cols-3 gap-2">
+                        {(() => {
+                          try {
+                            const photos = typeof selectedBooking.delivery_photos === 'string'
+                              ? JSON.parse(selectedBooking.delivery_photos)
+                              : selectedBooking.delivery_photos;
+
+                            return Array.isArray(photos) && photos.map((photo: string, idx: number) => (
+                              <div key={idx} className="aspect-video rounded-md overflow-hidden bg-muted group relative border">
+                                <img
+                                  src={photo}
+                                  alt={`Delivery ${idx + 1}`}
+                                  className="w-full h-full object-cover"
+                                />
+                                <a
+                                  href={photo}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity"
+                                >
+                                  <Eye className="text-white" size={16} />
+                                </a>
+                              </div>
+                            ));
+                          } catch (e) {
+                            return <p className="text-[10px] text-muted-foreground">Error loading photos</p>;
+                          }
+                        })()}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="bg-muted/30 p-2 rounded-md border">
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-0.5">Receiver</p>
+                      <p className="font-bold text-xs">{selectedBooking.receiver_name || 'Not provided'}</p>
+                    </div>
+                    <div className="bg-muted/30 p-2 rounded-md border">
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-0.5">Delivered On</p>
+                      <p className="font-bold text-[10px]">
+                        {selectedBooking.updated_at
+                          ? new Date(selectedBooking.updated_at).toLocaleString()
+                          : 'TBD'}
+                      </p>
+                    </div>
+                  </div>
+
+                  {selectedBooking.delivery_signature && (
+                    <div className="space-y-2">
+                      <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                        <Pencil size={12} /> Digital Signature
+                      </p>
+                      <div className="bg-white rounded-md border p-2 flex items-center justify-center">
+                        <img
+                          src={selectedBooking.delivery_signature}
+                          alt="Receiver Signature"
+                          className="max-h-16 object-contain"
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
           <DialogFooter>
@@ -456,6 +562,19 @@ const AvailableBookings: React.FC<AvailableBookingsProps> = ({ onMessage }) => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Shipper Profile Dialog */}
+      <ProviderProfileDialog
+        providerId={selectedShipperId}
+        open={shipperProfileOpen}
+        onOpenChange={setShipperProfileOpen}
+        onMessage={(participantId) => {
+          if (onMessage && selectedBooking) {
+            onMessage(selectedBooking.id, participantId);
+            setShipperProfileOpen(false);
+          }
+        }}
+      />
     </div>
   );
 };

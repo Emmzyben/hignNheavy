@@ -16,6 +16,8 @@ import {
   Trash2,
   DollarSign,
   User,
+  Camera,
+  FileCheck,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -48,7 +50,7 @@ import ProviderProfileDialog from "./admin/ProviderProfileDialog";
 import { Shield } from "lucide-react";
 
 interface BookingsListProps {
-  onTrack: () => void;
+  onTrack: (bookingId?: string) => void;
   onMessage: (bookingId: string, providerId: string) => void;
   onReview?: (bookingId: string) => void;
 }
@@ -352,7 +354,7 @@ const BookingsList = ({ onTrack, onMessage, onReview }: BookingsListProps) => {
                               )}
 
                               {booking.status === "in_transit" && (
-                                <DropdownMenuItem onClick={onTrack}>
+                                <DropdownMenuItem onClick={() => onTrack(booking.id)}>
                                   <MapPin size={16} className="mr-2" />
                                   Track Shipment
                                 </DropdownMenuItem>
@@ -379,206 +381,346 @@ const BookingsList = ({ onTrack, onMessage, onReview }: BookingsListProps) => {
 
       {/* Details Dialog */}
       <Dialog open={detailsOpen} onOpenChange={setDetailsOpen}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle className="text-2xl font-display">
-              Booking {selectedBooking?.id}
-            </DialogTitle>
-          </DialogHeader>
-          {selectedBooking && (
-            <div className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <DialogContent className="max-w-none w-screen h-screen overflow-y-auto p-0 gap-0 border-none rounded-none left-0 top-0 translate-x-0 translate-y-0">
+          <div className="max-w-5xl mx-auto w-full p-6 md:p-10 space-y-8">
+            <DialogHeader className="mb-8">
+              <div className="flex items-center justify-between">
                 <div>
-                  <p className="text-sm text-muted-foreground mb-1">Cargo Type</p>
-                  <p className="font-semibold">{selectedBooking.cargoType}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground mb-1">Status</p>
-                  <Badge className={`${statusConfig[selectedBooking.status]?.color || "bg-muted"} border-0 capitalize`}>
-                    {selectedBooking.status.replace('_', ' ')}
-                  </Badge>
-                </div>
-                <div className="md:col-span-2">
-                  <p className="text-sm text-muted-foreground mb-1">Pickup Location</p>
-                  <p className="font-semibold">{selectedBooking.pickupFull}</p>
-                </div>
-                <div className="md:col-span-2">
-                  <p className="text-sm text-muted-foreground mb-1">Delivery Location</p>
-                  <p className="font-semibold">{selectedBooking.deliveryFull}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground mb-1">Dimensions</p>
-                  <p className="font-semibold">{selectedBooking.dimensions}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground mb-1">Weight</p>
-                  <p className="font-semibold">{selectedBooking.weight}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground mb-1">Shipment Date</p>
-                  <p className="font-semibold">{selectedBooking.date}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground mb-1">Total Price</p>
-                  <p className="font-semibold text-primary text-lg">
-                    {selectedBooking.price > 0 ? `$${selectedBooking.price.toLocaleString()}` : 'Pending Quote'}
-                  </p>
+                  <DialogTitle className="text-3xl font-display font-bold">
+                    Booking Detail
+                  </DialogTitle>
+                  <p className="text-muted-foreground mt-1">ID: #{selectedBooking?.id}</p>
                 </div>
               </div>
+            </DialogHeader>
 
-              {/* Matched Providers Section */}
-              {(selectedBooking.carrier_id || selectedBooking.escort_id) && (
-                <div className="space-y-4 pt-4 border-t border-border">
-                  <h4 className="font-semibold text-lg">Matched Service Providers</h4>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    {selectedBooking.carrier_id && (
-                      <div className="p-4 bg-muted/30 rounded-xl border space-y-3">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
-                            <Truck className="text-primary" size={20} />
+            {selectedBooking && (
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <div className="lg:col-span-2 space-y-8">
+                  <div className="bg-card rounded-2xl border p-6 md:p-8 shadow-sm">
+                    <h3 className="text-lg font-bold mb-6 flex items-center gap-2">
+                      <Package className="text-primary" size={20} />
+                      Shipment Information
+                    </h3>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                      <div>
+                        <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2">Cargo Type</p>
+                        <p className="text-lg font-semibold">{selectedBooking.cargoType}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2">Status</p>
+                        <Badge className={`${statusConfig[selectedBooking.status]?.color || "bg-muted"} border-0 capitalize py-1 px-3`}>
+                          {selectedBooking.status.replace('_', ' ')}
+                        </Badge>
+                      </div>
+
+                      <div className="md:col-span-2 bg-muted/30 p-4 rounded-xl space-y-4">
+                        <div className="flex items-start gap-4">
+                          <div className="mt-1 p-2 bg-primary/10 rounded-lg">
+                            <MapPin className="text-primary" size={18} />
                           </div>
                           <div>
-                            <p className="text-xs text-muted-foreground font-bold uppercase">Carrier</p>
-                            <p className="font-bold leading-tight">{selectedBooking.carrier_company || selectedBooking.carrier_name}</p>
+                            <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Pickup Location</p>
+                            <p className="font-semibold text-lg">{selectedBooking.pickupFull}</p>
                           </div>
                         </div>
-                        <div className="flex gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="flex-1 h-8 text-xs"
-                            onClick={() => {
-                              setViewProviderId(selectedBooking.carrier_id);
-                              setProfileDialogOpen(true);
-                            }}
-                          >
-                            <User size={14} className="mr-1" /> Profile
-                          </Button>
-                          <Button
-                            variant="secondary"
-                            size="sm"
-                            className="flex-1 h-8 text-xs"
-                            onClick={() => onMessage(selectedBooking.id, selectedBooking.carrier_id)}
-                          >
-                            <MessageSquare size={14} className="mr-1" /> Chat
-                          </Button>
-
+                        <div className="flex items-start gap-4">
+                          <div className="mt-1 p-2 bg-secondary/10 rounded-lg">
+                            <MapPin className="text-secondary" size={18} />
+                          </div>
+                          <div>
+                            <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground">Delivery Location</p>
+                            <p className="font-semibold text-lg">{selectedBooking.deliveryFull}</p>
+                          </div>
                         </div>
                       </div>
-                    )}
-                    {selectedBooking.escort_id && (
-                      <div className="p-4 bg-purple-50 rounded-xl border border-purple-100 space-y-3">
-                        <div className="flex items-center gap-3">
-                          <div className="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center">
-                            <Shield className="text-purple-600" size={20} />
-                          </div>
-                          <div>
-                            <p className="text-xs text-purple-600 font-bold uppercase">Escort</p>
-                            <p className="font-bold leading-tight text-purple-900">{selectedBooking.escort_company || selectedBooking.escort_name}</p>
-                          </div>
-                        </div>
-                        <div className="flex gap-2">
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="flex-1 h-8 text-xs border-purple-200 text-purple-700 hover:bg-purple-50"
-                            onClick={() => {
-                              setViewProviderId(selectedBooking.escort_id);
-                              setProfileDialogOpen(true);
-                            }}
-                          >
-                            <User size={14} className="mr-1" /> Profile
-                          </Button>
-                          <Button
-                            variant="secondary"
-                            size="sm"
-                            className="flex-1 h-8 text-xs bg-purple-600 text-white hover:bg-purple-700"
-                            onClick={() => onMessage(selectedBooking.id, selectedBooking.escort_id)}
-                          >
-                            <MessageSquare size={14} className="mr-1" /> Chat
-                          </Button>
 
+                      <div>
+                        <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2">Dimensions</p>
+                        <div className="flex items-center gap-2">
+                          <div className="p-1.5 bg-muted rounded-md"><Package size={14} className="text-muted-foreground" /></div>
+                          <p className="font-semibold">{selectedBooking.dimensions}</p>
+                        </div>
+                      </div>
+                      <div>
+                        <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-2">Weight</p>
+                        <div className="flex items-center gap-2">
+                          <div className="p-1.5 bg-muted rounded-md"><Truck size={14} className="text-muted-foreground" /></div>
+                          <p className="font-semibold">{selectedBooking.weight}</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {selectedBooking.specialInstructions && (
+                      <div className="mt-8 pt-8 border-t border-border">
+                        <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-3">Special Instructions</p>
+                        <div className="bg-muted/50 p-6 rounded-xl border-l-4 border-primary">
+                          <p className="text-muted-foreground italic leading-relaxed">
+                            {selectedBooking.specialInstructions}
+                          </p>
                         </div>
                       </div>
                     )}
                   </div>
-                </div>
-              )}
 
-              {user?.role === "admin" && (selectedBooking.status === "pending_quote" || selectedBooking.status === "quoted") && (
-                <div className="space-y-4 pt-4 border-t border-border">
-                  <h4 className="font-semibold text-lg flex items-center gap-2">
-                    <DollarSign size={20} className="text-primary" />
-                    Bids & Quotes
-                  </h4>
-                  {loadingQuotes ? (
-                    <div className="flex items-center justify-center p-8 bg-muted/20 rounded-xl border border-dashed">
-                      <Loader2 className="h-6 w-6 animate-spin text-primary" />
-                    </div>
-                  ) : quotes.length === 0 ? (
-                    <div className="p-8 text-center bg-muted/20 rounded-xl border border-dashed">
-                      <p className="text-muted-foreground">No quotes submitted yet.</p>
-                    </div>
-                  ) : (
-                    <div className="space-y-3">
-                      {quotes.map((quote) => (
-                        <div key={quote.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-4 bg-card border rounded-lg gap-4 hover:shadow-md transition-shadow">
-                          <div className="space-y-1 flex-1">
-                            <p className="font-bold text-lg text-primary">${Number(quote.amount).toLocaleString()}</p>
-                            <p className="text-sm font-medium">{quote.carrier_name}</p>
-                            <div className="flex flex-wrap gap-x-4 gap-y-1">
-                              {quote.vehicle_name && (
-                                <p className="text-xs text-muted-foreground flex items-center gap-1">
-                                  <Truck size={12} /> {quote.vehicle_name}
-                                </p>
-                              )}
-                              {quote.driver_name && (
-                                <p className="text-xs text-muted-foreground flex items-center gap-1">
-                                  <User size={12} /> {quote.driver_name}
-                                </p>
-                              )}
+                  {/* Matched Providers Section */}
+                  {(selectedBooking.carrier_id || selectedBooking.escort_id) && (
+                    <div className="space-y-4">
+                      <h4 className="font-bold text-xl ml-1">Assigned Providers</h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        {selectedBooking.carrier_id && (
+                          <div className="p-6 bg-card rounded-2xl border shadow-sm space-y-4 transition-all hover:shadow-md">
+                            <div className="flex items-center gap-4">
+                              <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
+                                <Truck className="text-primary" size={24} />
+                              </div>
+                              <div>
+                                <p className="text-[10px] text-muted-foreground font-bold uppercase tracking-widest">Carrier</p>
+                                <p className="font-bold text-lg leading-tight">{selectedBooking.carrier_company || selectedBooking.carrier_name}</p>
+                              </div>
                             </div>
-                            {quote.notes && <p className="text-xs text-muted-foreground italic mt-1 font-mono">"{quote.notes}"</p>}
+                            <div className="flex gap-3 pt-2">
+                              <Button
+                                variant="outline"
+                                className="flex-1 rounded-xl h-10 font-bold"
+                                onClick={() => {
+                                  setViewProviderId(selectedBooking.carrier_id);
+                                  setProfileDialogOpen(true);
+                                }}
+                              >
+                                <User size={16} className="mr-2" /> Profile
+                              </Button>
+                              <Button
+                                className="flex-1 rounded-xl h-10 font-bold"
+                                onClick={() => onMessage(selectedBooking.id, selectedBooking.carrier_id)}
+                              >
+                                <MessageSquare size={16} className="mr-2" /> Chat
+                              </Button>
+                            </div>
                           </div>
-                          <Button
-                            onClick={() => handleAcceptQuote(quote.id)}
-                            size="sm"
-                            disabled={acceptingQuoteId !== null}
-                            className="bg-green-600 hover:bg-green-700 shadow-sm"
-                          >
-                            {acceptingQuoteId === quote.id ? (
-                              <><Loader2 size={14} className="mr-2 animate-spin" /> Accepting...</>
-                            ) : (
-                              "Accept Bid"
-                            )}
-                          </Button>
+                        )}
+                        {selectedBooking.escort_id && (
+                          <div className="p-6 bg-card rounded-2xl border shadow-sm space-y-4 border-purple-100 hover:shadow-md transition-all">
+                            <div className="flex items-center gap-4">
+                              <div className="w-12 h-12 rounded-xl bg-purple-100 flex items-center justify-center text-purple-600">
+                                <Shield size={24} />
+                              </div>
+                              <div>
+                                <p className="text-[10px] text-purple-600 font-bold uppercase tracking-widest">Escort Service</p>
+                                <p className="font-bold text-lg leading-tight text-purple-900">{selectedBooking.escort_company || selectedBooking.escort_name}</p>
+                              </div>
+                            </div>
+                            <div className="flex gap-3 pt-2">
+                              <Button
+                                variant="outline"
+                                className="flex-1 rounded-xl h-10 font-bold border-purple-200 text-purple-700 hover:bg-purple-50"
+                                onClick={() => {
+                                  setViewProviderId(selectedBooking.escort_id);
+                                  setProfileDialogOpen(true);
+                                }}
+                              >
+                                <User size={16} className="mr-2" /> Profile
+                              </Button>
+                              <Button
+                                className="flex-1 rounded-xl h-10 font-bold bg-purple-600 text-white hover:bg-purple-700"
+                                onClick={() => onMessage(selectedBooking.id, selectedBooking.escort_id)}
+                              >
+                                <MessageSquare size={16} className="mr-2" /> Chat
+                              </Button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                  {user?.role === "admin" && (selectedBooking.status === "pending_quote" || selectedBooking.status === "quoted") && (
+                    <div className="space-y-4">
+                      <h4 className="font-bold text-xl flex items-center gap-2 ml-1">
+                        <DollarSign size={24} className="text-primary" />
+                        Bids Received
+                      </h4>
+                      {loadingQuotes ? (
+                        <div className="flex items-center justify-center p-12 bg-muted/20 rounded-2xl border border-dashed">
+                          <Loader2 className="h-8 w-8 animate-spin text-primary" />
                         </div>
-                      ))}
+                      ) : quotes.length === 0 ? (
+                        <div className="p-12 text-center bg-muted/20 rounded-2xl border border-dashed">
+                          <p className="text-muted-foreground">No quotes submitted yet for this booking.</p>
+                        </div>
+                      ) : (
+                        <div className="grid gap-4">
+                          {quotes.map((quote) => (
+                            <div key={quote.id} className="flex flex-col md:flex-row items-start md:items-center justify-between p-6 bg-card border rounded-2xl gap-6 hover:shadow-lg transition-all">
+                              <div className="space-y-2 flex-1">
+                                <div className="flex items-center gap-2">
+                                  <p className="font-black text-3xl text-primary">${Number(quote.amount).toLocaleString()}</p>
+                                  <Badge variant="outline" className="font-bold border-primary/20 text-primary">BEST VALUE</Badge>
+                                </div>
+                                <p className="font-bold text-lg">{quote.carrier_name}</p>
+                                <div className="flex flex-wrap gap-4">
+                                  {quote.vehicle_name && (
+                                    <p className="text-xs text-muted-foreground flex items-center gap-1.5 font-medium">
+                                      <Truck size={14} className="text-primary" /> {quote.vehicle_name}
+                                    </p>
+                                  )}
+                                  {quote.driver_name && (
+                                    <p className="text-xs text-muted-foreground flex items-center gap-1.5 font-medium">
+                                      <User size={14} className="text-primary" /> {quote.driver_name}
+                                    </p>
+                                  )}
+                                </div>
+                                {quote.notes && (
+                                  <div className="mt-2 text-sm text-muted-foreground bg-muted/40 p-3 rounded-xl italic">
+                                    "{quote.notes}"
+                                  </div>
+                                )}
+                              </div>
+                              <Button
+                                onClick={() => handleAcceptQuote(quote.id)}
+                                size="lg"
+                                disabled={acceptingQuoteId !== null}
+                                className="bg-primary hover:bg-primary/90 text-primary-foreground font-bold rounded-xl shadow-lg shadow-primary/20 min-w-[160px]"
+                              >
+                                {acceptingQuoteId === quote.id ? (
+                                  <><Loader2 size={18} className="mr-2 animate-spin" /> Accepting...</>
+                                ) : (
+                                  "Accept Bid"
+                                )}
+                              </Button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
-              )}
 
-              {selectedBooking.specialInstructions && (
-                <div className="bg-muted/50 p-4 rounded-lg">
-                  <p className="text-sm font-semibold mb-2">Special Instructions</p>
-                  <p className="text-sm text-muted-foreground leading-relaxed">
-                    {selectedBooking.specialInstructions}
-                  </p>
+                <div className="space-y-6">
+                  <div className="bg-primary text-primary-foreground rounded-2xl p-8 shadow-xl relative overflow-hidden">
+                    <div className="absolute top-0 right-0 -mr-8 -mt-8 w-32 h-32 bg-white/10 rounded-full blur-2xl" />
+                    <p className="text-primary-foreground/70 font-bold uppercase tracking-wider text-xs mb-2">Agreed Price</p>
+                    <p className="text-5xl font-black mb-6">
+                      {selectedBooking.price > 0 ? `$${selectedBooking.price.toLocaleString()}` : 'TBD'}
+                    </p>
+                    <div className="space-y-4 pt-6 border-t border-primary-foreground/20 text-sm font-medium">
+                      <div className="flex justify-between items-center">
+                        <span className="opacity-80">Booking Date</span>
+                        <span className="font-bold">{selectedBooking.date}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="bg-card rounded-2xl border p-6 shadow-sm space-y-4">
+                    <h4 className="font-bold text-lg mb-2">Actions</h4>
+                    <div className="grid gap-3">
+                      {selectedBooking.status === "in_transit" && (
+                        <Button onClick={() => onTrack(selectedBooking.id)} className="w-full h-12 font-bold rounded-xl shadow-md">
+                          <MapPin size={20} className="mr-2" />
+                          Live Tracking
+                        </Button>
+                      )}
+
+                      <Button
+                        variant="outline"
+                        className="w-full h-12 font-bold rounded-xl"
+                        onClick={() => setDetailsOpen(false)}
+                      >
+                        Close Details
+                      </Button>
+                    </div>
+                  </div>
+
+                  {(selectedBooking.status === 'delivered' || selectedBooking.status === 'completed') && (
+                    <div className="bg-card rounded-2xl border p-6 shadow-sm space-y-6">
+                      <div className="flex items-center gap-2 mb-2">
+                        <div className="p-2 bg-green-100 rounded-lg">
+                          <FileCheck className="text-green-600" size={20} />
+                        </div>
+                        <h4 className="font-bold text-lg">Delivery Proof</h4>
+                      </div>
+
+                      {selectedBooking.rawBooking?.delivery_photos && (
+                        <div className="space-y-3">
+                          <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
+                            <Camera size={14} /> Delivery Photos
+                          </p>
+                          <div className="grid grid-cols-2 gap-2">
+                            {(() => {
+                              try {
+                                const photos = typeof selectedBooking.rawBooking.delivery_photos === 'string'
+                                  ? JSON.parse(selectedBooking.rawBooking.delivery_photos)
+                                  : selectedBooking.rawBooking.delivery_photos;
+
+                                return Array.isArray(photos) && photos.map((photo: string, idx: number) => (
+                                  <div key={idx} className="aspect-square rounded-xl overflow-hidden bg-muted group relative">
+                                    <img
+                                      src={photo}
+                                      alt={`Delivery ${idx + 1}`}
+                                      className="w-full h-full object-cover transition-transform group-hover:scale-110"
+                                    />
+                                    <a
+                                      href={photo}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity"
+                                    >
+                                      <Eye className="text-white" size={20} />
+                                    </a>
+                                  </div>
+                                ));
+                              } catch (e) {
+                                return <p className="text-sm text-muted-foreground">Error loading photos</p>;
+                              }
+                            })()}
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="grid grid-cols-1 gap-4 pt-4 border-t border-border">
+                        <div>
+                          <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1">Receiver Name</p>
+                          <p className="font-bold">{selectedBooking.rawBooking?.receiver_name || 'Not provided'}</p>
+                        </div>
+                        <div>
+                          <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1">Delivered On</p>
+                          <p className="font-bold">
+                            {selectedBooking.rawBooking?.updated_at
+                              ? new Date(selectedBooking.rawBooking.updated_at).toLocaleString()
+                              : 'TBD'}
+                          </p>
+                        </div>
+                      </div>
+
+                      {selectedBooking.rawBooking?.delivery_signature && (
+                        <div className="pt-4 border-t border-border">
+                          <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-3 flex items-center gap-2">
+                            <Pencil size={14} /> Digital Signature
+                          </p>
+                          <div className="bg-white rounded-xl border p-4 flex items-center justify-center">
+                            <img
+                              src={selectedBooking.rawBooking.delivery_signature}
+                              alt="Receiver Signature"
+                              className="max-h-32 object-contain"
+                            />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  <div className="p-6 bg-muted/30 rounded-2xl border border-dashed text-center">
+                    <AlertCircle className="mx-auto mb-2 text-muted-foreground" size={24} />
+                    <p className="text-xs text-muted-foreground font-medium leading-relaxed">
+                      Need help with this booking? <br />
+                      Contact our support team anytime.
+                    </p>
+                  </div>
                 </div>
-              )}
-
-              <div className="flex flex-wrap gap-3 pt-4 border-t border-border">
-                {selectedBooking.status === "in_transit" && (
-                  <Button onClick={onTrack} className="flex-1 md:flex-none">
-                    <MapPin size={18} className="mr-2" />
-                    Track Shipment
-                  </Button>
-                )}
-
               </div>
-            </div>
-          )}
+            )}
+          </div>
         </DialogContent>
       </Dialog>
       {/* Edit Booking Dialog */}

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Search, Eye, Edit, UserPlus, Filter, Calendar, Loader2, User } from "lucide-react";
+import { Search, Eye, Edit, UserPlus, Filter, Calendar, Loader2, User, Camera, Pencil, FileCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -272,6 +272,80 @@ const ManageBookings = () => {
                     <h4 className="font-bold text-sm uppercase text-muted-foreground mb-3">Special Instructions</h4>
                     <p className="text-sm italic">{selectedBooking.special_instructions || 'No special instructions.'}</p>
                   </div>
+
+                  {(selectedBooking.status === 'delivered' || selectedBooking.status === 'completed') && (
+                    <div className="bg-card rounded-lg border p-4 space-y-4">
+                      <div className="flex items-center gap-2 mb-2">
+                        <div className="p-1.5 bg-green-100 rounded-md">
+                          <FileCheck className="text-green-600" size={16} />
+                        </div>
+                        <h4 className="font-bold text-sm">Delivery Proof</h4>
+                      </div>
+
+                      {selectedBooking.delivery_photos && (
+                        <div className="space-y-2">
+                          <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                            <Camera size={12} /> Delivery Photos
+                          </p>
+                          <div className="grid grid-cols-2 gap-2">
+                            {(() => {
+                              try {
+                                const photos = typeof selectedBooking.delivery_photos === 'string'
+                                  ? JSON.parse(selectedBooking.delivery_photos)
+                                  : selectedBooking.delivery_photos;
+
+                                return Array.isArray(photos) && photos.map((photo: string, idx: number) => (
+                                  <div key={idx} className="aspect-video rounded-md overflow-hidden bg-muted group relative border">
+                                    <img
+                                      src={photo}
+                                      alt={`Delivery ${idx + 1}`}
+                                      className="w-full h-full object-cover"
+                                    />
+                                    <a
+                                      href={photo}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity"
+                                    >
+                                      <Eye className="text-white" size={16} />
+                                    </a>
+                                  </div>
+                                ));
+                              } catch (e) {
+                                return <p className="text-[10px] text-muted-foreground">Error loading photos</p>;
+                              }
+                            })()}
+                          </div>
+                        </div>
+                      )}
+
+                      <div className="grid grid-cols-1 gap-3">
+                        <div className="bg-muted/30 p-2 rounded-md border">
+                          <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-0.5">Receiver</p>
+                          <p className="font-bold text-xs">{selectedBooking.receiver_name} (Signed)</p>
+                        </div>
+                        <div className="bg-muted/30 p-2 rounded-md border">
+                          <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-0.5">Delivered At</p>
+                          <p className="font-bold text-xs">{new Date(selectedBooking.updated_at).toLocaleString()}</p>
+                        </div>
+                      </div>
+
+                      {selectedBooking.delivery_signature && (
+                        <div className="space-y-2">
+                          <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+                            <Pencil size={12} /> Signature
+                          </p>
+                          <div className="bg-white rounded-md border p-2 flex items-center justify-center">
+                            <img
+                              src={selectedBooking.delivery_signature}
+                              alt="Signature"
+                              className="max-h-20 object-contain"
+                            />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
 

@@ -9,6 +9,11 @@ interface User {
     status?: 'active' | 'disabled';
     profile_completed?: boolean;
     email_verified?: boolean;
+    email_notifications?: boolean;
+    push_notifications?: boolean;
+    phone_number?: string;
+    contact_number?: string;
+    avatar_url?: string;
 }
 
 interface AuthContextType {

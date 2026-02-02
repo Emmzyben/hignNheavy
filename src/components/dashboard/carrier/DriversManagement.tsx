@@ -19,6 +19,7 @@ interface Driver {
   licenseExpiry: string;
   status: 'available' | 'on-job' | 'off-duty';
   completedJobs: number;
+  avatarUrl?: string;
 }
 
 const DriversManagement = () => {
@@ -31,7 +32,8 @@ const DriversManagement = () => {
     name: '',
     email: '',
     phone: '',
-    license: 'CDL-A',
+    license_number: '',
+    license_type: 'CDL-A',
     licenseExpiry: '',
     password: '',
   });
@@ -53,7 +55,8 @@ const DriversManagement = () => {
           license: d.license_number,
           licenseExpiry: d.license_expiry ? new Date(d.license_expiry).toISOString().split('T')[0] : '',
           status: d.status,
-          completedJobs: d.completed_jobs
+          completedJobs: d.completed_jobs,
+          avatarUrl: d.avatar_url
         }));
         setDrivers(mappedDrivers);
       }
@@ -70,7 +73,8 @@ const DriversManagement = () => {
       name: '',
       email: '',
       phone: '',
-      license: 'CDL-A',
+      license_number: '',
+      license_type: 'CDL-A',
       licenseExpiry: '',
       password: '',
     });
@@ -88,7 +92,8 @@ const DriversManagement = () => {
       name: driver.name,
       email: driver.email,
       phone: driver.phone,
-      license: driver.license,
+      license_number: driver.license,
+      license_type: 'CDL-A', // Reset to default or parse if concatenated
       licenseExpiry: driver.licenseExpiry,
       password: '',
     });
@@ -96,18 +101,33 @@ const DriversManagement = () => {
   };
 
   const handleSave = async () => {
-    if (!formData.name || !formData.email || !formData.phone || (!editingDriver && !formData.password)) {
+    if (!formData.name || !formData.email || !formData.phone || !formData.license_number || (!editingDriver && !formData.password)) {
       toast.error('Please fill in all required fields');
       return;
     }
 
     setSubmitting(true);
     try {
+      const payload = {
+        name: formData.name,
+        email: formData.email,
+        phone: formData.phone,
+        license: formData.license_number, // backend expects 'license' for license_number
+        licenseExpiry: formData.licenseExpiry,
+        password: formData.password
+      };
+
       if (editingDriver) {
-        const response = await api.put(`/drivers/${editingDriver.id}`, {
-          ...formData,
-          status: editingDriver.status // Keep current status
-        });
+        const updatePayload = {
+          ...payload,
+          status: editingDriver.status
+        };
+
+        if (!updatePayload.password) {
+          delete (updatePayload as any).password;
+        }
+
+        const response = await api.put(`/drivers/${editingDriver.id}`, updatePayload);
         if (response.data.success) {
           toast.success('Driver updated successfully');
           fetchDrivers();
@@ -115,7 +135,7 @@ const DriversManagement = () => {
           resetForm();
         }
       } else {
-        const response = await api.post('/drivers', formData);
+        const response = await api.post('/drivers', payload);
         if (response.data.success) {
           toast.success('Driver added successfully');
           fetchDrivers();
@@ -236,8 +256,16 @@ const DriversManagement = () => {
               <CardContent className="p-6">
                 <div className="flex items-start justify-between">
                   <div className="flex items-start gap-4">
-                    <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center">
-                      <User className="h-6 w-6 text-primary" />
+                    <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center overflow-hidden border">
+                      {driver.avatarUrl ? (
+                        <img
+                          src={driver.avatarUrl}
+                          alt={driver.name}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <User className="h-6 w-6 text-primary" />
+                      )}
                     </div>
                     <div>
                       <h3 className="font-semibold text-lg">{driver.name}</h3>
@@ -322,12 +350,21 @@ const DriversManagement = () => {
                 disabled={submitting}
               />
             </div>
+            <div className="space-y-2">
+              <Label>License Number *</Label>
+              <Input
+                value={formData.license_number}
+                onChange={(e) => setFormData({ ...formData, license_number: e.target.value })}
+                placeholder="TX-12345678"
+                disabled={submitting}
+              />
+            </div>
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label>License Type</Label>
                 <Select
-                  value={formData.license}
-                  onValueChange={(val) => setFormData({ ...formData, license: val })}
+                  value={formData.license_type}
+                  onValueChange={(val) => setFormData({ ...formData, license_type: val })}
                   disabled={submitting}
                 >
                   <SelectTrigger>
@@ -350,19 +387,21 @@ const DriversManagement = () => {
                 />
               </div>
             </div>
-            {!editingDriver && (
-              <div className="space-y-2">
-                <Label>Initial Password *</Label>
-                <Input
-                  type="password"
-                  value={formData.password}
-                  onChange={(e) => setFormData({ ...formData, password: e.target.value })}
-                  placeholder="Create login password"
-                  disabled={submitting}
-                />
-                <p className="text-xs text-muted-foreground">Driver will use this to log into the app</p>
-              </div>
-            )}
+            <div className="space-y-2">
+              <Label>{editingDriver ? 'Change Password' : 'Initial Password *'}</Label>
+              <Input
+                type="password"
+                value={formData.password}
+                onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                placeholder={editingDriver ? "Leave blank to keep current" : "Create login password"}
+                disabled={submitting}
+              />
+              <p className="text-xs text-muted-foreground">
+                {editingDriver
+                  ? "Only enter a new password if you want to change it"
+                  : "Driver will use this to log into the app"}
+              </p>
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)} disabled={submitting}>Cancel</Button>

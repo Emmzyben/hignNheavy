@@ -6,11 +6,12 @@ import { cn } from "@/lib/utils";
 import {
     LayoutDashboard, PlusCircle, Package, FileText, Wallet, MessageSquare,
     Truck, ClipboardList, Users, Settings, DollarSign, Car,
-    ChevronLeft, Menu, LogOut, X, User, MapPin, Star
+    ChevronLeft, Menu, LogOut, X, User, MapPin, Star, Navigation
 } from "lucide-react";
 import logo from "@/assets/logo.svg";
 import { toast } from "sonner";
 import NotificationBell from "./NotificationBell";
+import DriverBottomNav from "../driver/DriverBottomNav";
 
 interface DashboardLayoutProps {
     children: React.ReactNode;
@@ -55,6 +56,12 @@ const MENU_ITEMS: Record<string, any[]> = {
         { id: 'escorts', label: 'Manage Escorts', icon: Car },
         { id: 'bookings', label: 'All Bookings', icon: Package },
         { id: 'payouts', label: 'Payouts', icon: Wallet },
+        { id: 'messages', label: 'Messages', icon: MessageSquare },
+    ],
+    driver: [
+        { id: 'requests', label: 'Available Loads', icon: ClipboardList },
+        { id: 'trips', label: 'My Trips', icon: Package },
+        { id: 'active', label: 'Active Trip', icon: Navigation },
         { id: 'messages', label: 'Messages', icon: MessageSquare },
     ]
 };
@@ -153,8 +160,16 @@ const DashboardLayout = ({ children, activeSection, onSectionChange, onMessage, 
                         isProfilePage ? "bg-accent shadow-inner" : "hover:bg-accent"
                     )}
                 >
-                    <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center border border-primary/20 shrink-0 shadow-sm text-primary font-bold">
-                        {user?.full_name?.charAt(0) || 'U'}
+                    <div className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center border border-primary/20 shrink-0 shadow-sm overflow-hidden">
+                        {user?.avatar_url ? (
+                            <img
+                                src={user.avatar_url}
+                                alt="avatar"
+                                className="w-full h-full object-cover"
+                            />
+                        ) : (
+                            <span className="text-primary font-bold">{user?.full_name?.charAt(0) || 'U'}</span>
+                        )}
                     </div>
                     {(sidebarOpen || mobileMenuOpen) && (
                         <div className="min-w-0 flex-1">
@@ -181,12 +196,14 @@ const DashboardLayout = ({ children, activeSection, onSectionChange, onMessage, 
     return (
         <div className="min-h-screen bg-muted/30 flex">
             {/* Sidebar - Desktop */}
-            <aside className={cn(
-                "hidden lg:block bg-card border-r border-border transition-all duration-300 h-screen sticky top-0 z-40",
-                sidebarOpen ? "w-64" : "w-20"
-            )}>
-                <SidebarContent />
-            </aside>
+            {role !== 'driver' && (
+                <aside className={cn(
+                    "hidden lg:block bg-card border-r border-border transition-all duration-300 h-screen sticky top-0 z-40",
+                    sidebarOpen ? "w-64" : "w-20"
+                )}>
+                    <SidebarContent />
+                </aside>
+            )}
 
             {/* Sidebar - Mobile */}
             {mobileMenuOpen && (
@@ -213,16 +230,20 @@ const DashboardLayout = ({ children, activeSection, onSectionChange, onMessage, 
             <div className="flex-1 flex flex-col min-w-0">
                 {/* Mobile Header */}
                 <header className="h-16 border-b border-border bg-card/80 backdrop-blur-md sticky top-0 z-30 flex items-center px-4 lg:hidden">
-                    <Button variant="ghost" size="icon" onClick={() => setMobileMenuOpen(true)}>
-                        <Menu size={20} />
-                    </Button>
-                    <div className="ml-4 flex items-center gap-2">
+                    {role !== 'driver' && (
+                        <Button variant="ghost" size="icon" onClick={() => setMobileMenuOpen(true)}>
+                            <Menu size={20} />
+                        </Button>
+                    )}
+                    <div className={cn("flex items-center gap-2", role !== 'driver' ? "ml-4" : "mx-auto")}>
                         <img src={logo} alt="logo" className="w-8" />
                         <h2 className="font-display font-black text-primary text-lg">HighnHeavy</h2>
                     </div>
-                    <div className="ml-auto">
-                        <NotificationBell />
-                    </div>
+                    {role !== 'driver' && (
+                        <div className="ml-auto">
+                            <NotificationBell />
+                        </div>
+                    )}
                 </header>
 
                 {/* Top Header - Desktop */}
@@ -246,15 +267,32 @@ const DashboardLayout = ({ children, activeSection, onSectionChange, onMessage, 
                             <p className="text-sm font-bold">{user?.full_name}</p>
                             <p className="text-[10px] text-muted-foreground capitalize font-bold tracking-widest">{user?.role}</p>
                         </div>
-                        <Link to="/dashboard/profile" className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center border border-primary/20 hover:scale-105 transition-transform">
-                            <User size={18} className="text-primary" />
+                        <Link to="/dashboard/profile" className="h-10 w-10 rounded-full bg-primary/10 flex items-center justify-center border border-primary/20 hover:scale-105 transition-transform overflow-hidden shadow-sm">
+                            {user?.avatar_url ? (
+                                <img
+                                    src={user.avatar_url}
+                                    alt="avatar"
+                                    className="w-full h-full object-cover"
+                                />
+                            ) : (
+                                <User size={18} className="text-primary" />
+                            )}
                         </Link>
                     </div>
                 </header>
 
-                <main className="flex-1 p-4 lg:p-8">
+                <main className={cn(
+                    "flex-1 p-4 lg:p-8",
+                    role === 'driver' ? "pb-24 lg:pb-24" : "pb-4 lg:pb-8"
+                )}>
                     {children}
                 </main>
+
+                {role === 'driver' && (
+                    <DriverBottomNav
+                        activeTab={(activeSection === 'requests' || activeSection === 'active' || activeSection === 'trips' || activeSection === 'messages') ? activeSection : 'profile' as any}
+                    />
+                )}
             </div>
         </div>
     );

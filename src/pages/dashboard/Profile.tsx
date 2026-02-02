@@ -11,9 +11,10 @@ import { User, Mail, Phone, MapPin, Building, Shield, Truck, Briefcase, Lock, Be
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import ProfileImageUploader from "@/components/ProfileImageUploader";
 
 const Profile = () => {
-    const { user } = useAuth();
+    const { user, refreshUser } = useAuth();
     const [loading, setLoading] = useState(false);
     const [fetching, setFetching] = useState(true);
     const [profileData, setProfileData] = useState<any>({
@@ -51,8 +52,10 @@ const Profile = () => {
             try {
                 const response = await api.get("/users/me");
                 if (response.data.success) {
+                    console.log("Profile data fetched:", response.data.data);
                     setProfileData(response.data.data);
                     setEmailNotifications(response.data.data.email_notifications !== false);
+                    refreshUser(); // Sync global context
                 }
             } catch (error: any) {
                 if (error.response?.status !== 404) {
@@ -149,10 +152,14 @@ const Profile = () => {
                     {/* Profile Card */}
                     <div className="bg-card shadow-lg border rounded-2xl p-6 h-fit space-y-6">
                         <div className="flex flex-col items-center text-center">
-                            <div className="w-24 h-24 rounded-full bg-primary/10 flex items-center justify-center mb-4 border-2 border-primary/20">
-                                <User size={48} className="text-primary" />
-                            </div>
-                            <h2 className="text-xl font-bold">{user?.full_name}</h2>
+                            <ProfileImageUploader
+                                currentImageUrl={profileData.avatar_url || user?.avatar_url}
+                                onUploadSuccess={(url) => {
+                                    setProfileData((prev: any) => ({ ...prev, avatar_url: url }));
+                                    refreshUser();
+                                }}
+                            />
+                            <h2 className="text-xl font-bold mt-4">{user?.full_name}</h2>
                             <p className="text-sm text-muted-foreground capitalize font-medium">{user?.role}</p>
                         </div>
 

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Search, Eye, Ban, MoreVertical, Loader2, Download, CheckCircle2, MessageSquare } from "lucide-react";
+import { Search, Eye, Ban, MoreVertical, Loader2, Download, CheckCircle2, MessageSquare, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -146,11 +146,22 @@ const ManageEscorts = ({ onMessage }: ManageEscortsProps) => {
                 ) : filteredEscorts.map((escort) => (
                   <TableRow key={escort.id}>
                     <TableCell className="font-medium">
-                      <div>
-                        {escort.full_name}
-                        {escort.profile_completed && <CheckCircle2 className="h-3 w-3 inline ml-1 text-blue-500" />}
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center overflow-hidden border">
+                          {escort.avatar_url ? (
+                            <img src={escort.avatar_url} alt={escort.full_name} className="w-full h-full object-cover" />
+                          ) : (
+                            <User size={14} className="text-primary" />
+                          )}
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-1">
+                            {escort.full_name}
+                            {escort.profile_completed && <CheckCircle2 className="h-3 w-3 text-blue-500" />}
+                          </div>
+                          <div className="text-xs text-muted-foreground font-mono">{escort.id.slice(0, 8)}</div>
+                        </div>
                       </div>
-                      <div className="text-xs text-muted-foreground font-mono">{escort.id.slice(0, 8)}</div>
                     </TableCell>
                     <TableCell>{escort.company_name || "Personal Service"}</TableCell>
                     <TableCell>

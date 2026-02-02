@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Truck, Plus, Edit, Trash2, Calendar, CheckCircle, Loader2 } from 'lucide-react';
+import { Truck, Plus, Edit, Trash2, Calendar, CheckCircle, Loader2, Eye, MapPin, Package, ShieldCheck } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -9,6 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { toast } from 'sonner';
 import api from '@/lib/api';
+import EquipmentImageUploader from '../EquipmentImageUploader';
 
 interface Equipment {
   id: string;
@@ -21,6 +22,7 @@ interface Equipment {
   dimensions: string;
   status: 'available' | 'in-use' | 'maintenance';
   last_inspection: string;
+  photos: string[];
 }
 
 const equipmentTypes = [
@@ -40,6 +42,9 @@ const EquipmentManagement = () => {
   const [editingEquipment, setEditingEquipment] = useState<Equipment | null>(null);
   const [isSaving, setIsSaving] = useState(false);
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
+  const [selectedDetails, setSelectedDetails] = useState<Equipment | null>(null);
+  const [detailsOpen, setDetailsOpen] = useState(false);
+  const [activePhoto, setActivePhoto] = useState(0);
 
   const [formData, setFormData] = useState({
     type: '',
@@ -51,6 +56,7 @@ const EquipmentManagement = () => {
     year: '',
     last_inspection: '',
     status: 'available' as any,
+    photos: [] as string[],
   });
 
   useEffect(() => {
@@ -62,7 +68,11 @@ const EquipmentManagement = () => {
     try {
       const response = await api.get('/vehicles');
       if (response.data.success) {
-        setEquipment(response.data.data);
+        const parsedData = response.data.data.map((item: any) => ({
+          ...item,
+          photos: typeof item.photos === 'string' ? JSON.parse(item.photos) : (item.photos || [])
+        }));
+        setEquipment(parsedData);
       }
     } catch (error) {
       console.error('Fetch equipment error:', error);
@@ -83,6 +93,7 @@ const EquipmentManagement = () => {
       year: '',
       last_inspection: '',
       status: 'available',
+      photos: [],
     });
     setEditingEquipment(null);
   };
@@ -104,8 +115,15 @@ const EquipmentManagement = () => {
       year: item.year || '',
       last_inspection: item.last_inspection ? new Date(item.last_inspection).toISOString().split('T')[0] : '',
       status: item.status,
+      photos: item.photos || [],
     });
     setDialogOpen(true);
+  };
+
+  const handleOpenDetails = (item: Equipment) => {
+    setSelectedDetails(item);
+    setActivePhoto(0);
+    setDetailsOpen(true);
   };
 
   const handleSave = async () => {
@@ -243,13 +261,28 @@ const EquipmentManagement = () => {
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {equipment.map((item) => (
-            <Card key={item.id} className="hover:border-primary/50 transition-colors border shadow-sm">
-              <CardContent className="p-6">
+            <Card key={item.id} className="hover:border-primary/50 transition-colors border shadow-sm overflow-hidden flex flex-col">
+              {item.photos && item.photos.length > 0 && (
+                <div className="h-40 w-full overflow-hidden border-b">
+                  <img src={item.photos[0]} alt={item.name} className="w-full h-full object-cover" />
+                </div>
+              )}
+              <CardContent className="p-6 flex-1">
                 <div className="flex items-start justify-between mb-4">
-                  <div className="p-3 bg-primary/20 rounded-lg">
+                  <div
+                    className="p-3 bg-primary/20 rounded-lg cursor-pointer hover:bg-primary/30 transition-colors"
+                    onClick={() => handleOpenDetails(item)}
+                  >
                     <Truck className="h-6 w-6 text-primary" />
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex-1 px-3 min-w-0">
+                    <h3 className="font-semibold text-lg truncate">{item.name}</h3>
+                    <p className="text-xs text-muted-foreground truncate">{item.type}</p>
+                  </div>
+                  <div className="flex gap-1">
+                    <Button size="icon" variant="ghost" onClick={() => handleOpenDetails(item)} title="View Details">
+                      <Eye className="h-4 w-4 text-primary" />
+                    </Button>
                     <Button size="icon" variant="ghost" onClick={() => handleOpenEdit(item)} disabled={isDeleting === item.id}>
                       <Edit className="h-4 w-4" />
                     </Button>
@@ -305,7 +338,7 @@ const EquipmentManagement = () => {
 
       {/* Add/Edit Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="text-xl font-display">
               {editingEquipment ? 'Edit Equipment' : 'Add New Equipment'}
@@ -400,12 +433,136 @@ const EquipmentManagement = () => {
                 />
               </div>
             </div>
+
+            <div className="space-y-2">
+              <Label>Equipment Photos ({formData.photos.length}/5)</Label>
+              <EquipmentImageUploader
+                images={formData.photos}
+                onImagesChange={(photos) => setFormData({ ...formData, photos })}
+                maxImages={5}
+              />
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)} disabled={isSaving}>Cancel</Button>
             <Button onClick={handleSave} disabled={isSaving}>
               {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {editingEquipment ? 'Save Changes' : 'Add Equipment'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Details View Dialog */}
+      <Dialog open={detailsOpen} onOpenChange={setDetailsOpen}>
+        <DialogContent className="max-w-3xl overflow-y-auto max-h-[90vh]">
+          <DialogHeader>
+            <DialogTitle className="text-2xl font-display flex items-center gap-2">
+              <Truck className="text-primary" />
+              {selectedDetails?.name} Details
+            </DialogTitle>
+          </DialogHeader>
+
+          {selectedDetails && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 py-4">
+              {/* Photo Gallery */}
+              <div className="space-y-4">
+                <div className="aspect-video w-full rounded-2xl overflow-hidden bg-muted border">
+                  {(selectedDetails.photos && (typeof selectedDetails.photos === 'string' ? JSON.parse(selectedDetails.photos) : selectedDetails.photos)).length > 0 ? (
+                    <img
+                      src={(typeof selectedDetails.photos === 'string' ? JSON.parse(selectedDetails.photos) : selectedDetails.photos)[activePhoto]}
+                      alt="Equipment"
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex flex-col items-center justify-center text-muted-foreground opacity-20">
+                      <Truck size={64} />
+                      <p className="mt-2 font-bold">No Photos</p>
+                    </div>
+                  )}
+                </div>
+
+                {(selectedDetails.photos && (typeof selectedDetails.photos === 'string' ? JSON.parse(selectedDetails.photos) : selectedDetails.photos)).length > 1 && (
+                  <div className="flex gap-2 overflow-x-auto pb-2 no-scrollbar">
+                    {(typeof selectedDetails.photos === 'string' ? JSON.parse(selectedDetails.photos) : selectedDetails.photos).map((url: string, i: number) => (
+                      <button
+                        key={i}
+                        onClick={() => setActivePhoto(i)}
+                        className={`w-20 h-20 rounded-lg overflow-hidden border-2 shrink-0 transition-all ${activePhoto === i ? 'border-primary' : 'border-transparent opacity-60'}`}
+                      >
+                        <img src={url} className="w-full h-full object-cover" alt="" />
+                      </button>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Specifications */}
+              <div className="space-y-6">
+                <div className="flex items-center gap-3">
+                  <Badge className={getStatusColor(selectedDetails.status)}>
+                    {selectedDetails.status.replace('-', ' ')}
+                  </Badge>
+                  <p className="text-xs text-muted-foreground uppercase font-black">ID: {selectedDetails.id.split('-')[0]}</p>
+                </div>
+
+                <div className="grid grid-cols-1 gap-4">
+                  <div className="p-4 bg-muted/30 rounded-xl border border-border">
+                    <p className="text-[10px] text-muted-foreground uppercase font-black mb-1">Equipment Type</p>
+                    <p className="font-bold flex items-center gap-2">
+                      <Package size={16} className="text-primary" />
+                      {selectedDetails.type}
+                    </p>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="p-4 bg-muted/30 rounded-xl border border-border">
+                      <p className="text-[10px] text-muted-foreground uppercase font-black mb-1">Plate Number</p>
+                      <p className="font-mono font-bold text-primary">{selectedDetails.plate_number}</p>
+                    </div>
+                    <div className="p-4 bg-muted/30 rounded-xl border border-border">
+                      <p className="text-[10px] text-muted-foreground uppercase font-black mb-1">Year</p>
+                      <p className="font-bold">{selectedDetails.year || 'N/A'}</p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="p-4 bg-muted/30 rounded-xl border border-border">
+                      <p className="text-[10px] text-muted-foreground uppercase font-black mb-1">Capacity</p>
+                      <p className="font-bold">{selectedDetails.capacity || 'N/A'}</p>
+                    </div>
+                    <div className="p-4 bg-muted/30 rounded-xl border border-border">
+                      <p className="text-[10px] text-muted-foreground uppercase font-black mb-1">Dimensions</p>
+                      <p className="font-bold">{selectedDetails.dimensions || 'N/A'}</p>
+                    </div>
+                  </div>
+
+                  <div className="p-4 bg-muted/30 rounded-xl border border-border">
+                    <p className="text-[10px] text-muted-foreground uppercase font-black mb-1">VIN / Chassis Number</p>
+                    <p className="font-mono text-xs">{selectedDetails.vin || 'Not Registered'}</p>
+                  </div>
+
+                  <div className="p-4 bg-primary/5 rounded-xl border border-primary/10 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <ShieldCheck size={20} className="text-primary" />
+                      <div>
+                        <p className="text-[10px] text-muted-foreground uppercase font-black">Last Inspection</p>
+                        <p className="font-bold text-sm">
+                          {selectedDetails.last_inspection ? new Date(selectedDetails.last_inspection).toLocaleDateString() : 'Pending'}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          <DialogFooter className="mt-4">
+            <Button variant="outline" onClick={() => setDetailsOpen(false)} className="w-full md:w-auto">Close</Button>
+            <Button onClick={() => { setDetailsOpen(false); handleOpenEdit(selectedDetails!); }} className="w-full md:w-auto">
+              <Edit className="h-4 w-4 mr-2" />
+              Edit Specification
             </Button>
           </DialogFooter>
         </DialogContent>

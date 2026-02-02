@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Search, Eye, Edit, Ban, MessageSquare, Package, MoreVertical, Loader2 } from "lucide-react";
+import { Search, Eye, Edit, Ban, MessageSquare, Package, MoreVertical, Loader2, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -40,6 +40,7 @@ interface Shipper {
   address?: string;
   city?: string;
   state?: string;
+  avatar_url?: string;
 }
 
 interface ManageShippersProps {
@@ -57,6 +58,8 @@ const ManageShippers = ({ onMessage }: ManageShippersProps) => {
   const [isSaving, setIsSaving] = useState(false);
   const [userBookings, setUserBookings] = useState<any[]>([]);
   const [loadingHistory, setLoadingHistory] = useState(false);
+  const [selectedBookingDetail, setSelectedBookingDetail] = useState<any | null>(null);
+  const [bookingDetailOpen, setBookingDetailOpen] = useState(false);
 
   useEffect(() => {
     fetchShippers();
@@ -150,6 +153,11 @@ const ManageShippers = ({ onMessage }: ManageShippersProps) => {
     }
   };
 
+  const handleViewBooking = (booking: any) => {
+    setSelectedBookingDetail(booking);
+    setBookingDetailOpen(true);
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -212,7 +220,18 @@ const ManageShippers = ({ onMessage }: ManageShippersProps) => {
                   </TableRow>
                 ) : filteredShippers.map((shipper) => (
                   <TableRow key={shipper.id}>
-                    <TableCell className="font-medium">{shipper.full_name}</TableCell>
+                    <TableCell className="font-medium">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center overflow-hidden border">
+                          {shipper.avatar_url ? (
+                            <img src={shipper.avatar_url} alt={shipper.full_name} className="w-full h-full object-cover" />
+                          ) : (
+                            <User size={14} className="text-primary" />
+                          )}
+                        </div>
+                        {shipper.full_name}
+                      </div>
+                    </TableCell>
                     <TableCell>{shipper.company_name || "N/A"}</TableCell>
                     <TableCell>{shipper.email}</TableCell>
                     <TableCell>{new Date(shipper.created_at).toLocaleDateString()}</TableCell>
@@ -260,21 +279,44 @@ const ManageShippers = ({ onMessage }: ManageShippersProps) => {
           </DialogHeader>
           {selectedShipper && (
             <Tabs defaultValue="details">
-              <TabsList className="grid w-full grid-cols-2">
+              <TabsList className="grid w-full grid-cols-2 mb-6">
                 <TabsTrigger value="details">Profile Details</TabsTrigger>
                 <TabsTrigger value="history">Bookings ({userBookings.length})</TabsTrigger>
-                {onMessage && (
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    className="ml-auto"
-                    onClick={() => onMessage(selectedShipper.id)}
-                  >
-                    <MessageSquare className="h-4 w-4 mr-1" /> Chat
-                  </Button>
-                )}
               </TabsList>
               <TabsContent value="details" className="space-y-4 mt-4">
+                <div className="flex flex-col sm:flex-row items-center gap-4 mb-6 bg-primary/5 p-6 rounded-2xl border border-primary/10">
+                  <div className="w-24 h-24 rounded-full bg-primary/10 flex items-center justify-center overflow-hidden border-4 border-white shadow-md shrink-0">
+                    {selectedShipper.avatar_url ? (
+                      <img src={selectedShipper.avatar_url} alt={selectedShipper.full_name} className="w-full h-full object-cover" />
+                    ) : (
+                      <User size={40} className="text-primary/40" />
+                    )}
+                  </div>
+                  <div className="flex-1 text-center sm:text-left">
+                    <h3 className="text-2xl font-bold tracking-tight">{selectedShipper.full_name}</h3>
+                    <p className="text-sm text-primary font-medium">{selectedShipper.company_name || "Independent Shipper"}</p>
+                    <div className="mt-3 flex flex-wrap justify-center sm:justify-start gap-2">
+                      <Badge variant="outline" className="bg-white/50 border-primary/20 capitalize">
+                        {selectedShipper.status}
+                      </Badge>
+                      {selectedShipper.profile_completed && (
+                        <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200">
+                          Verified
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                  {onMessage && (
+                    <Button
+                      onClick={() => onMessage(selectedShipper.id)}
+                      className="shrink-0 gap-2 shadow-sm"
+                    >
+                      <MessageSquare size={18} />
+                      Chat with Shipper
+                    </Button>
+                  )}
+                </div>
+
                 <div className="grid grid-cols-2 gap-4 bg-muted/30 p-4 rounded-lg border">
                   <div>
                     <p className="text-xs text-muted-foreground uppercase font-bold">Full Name</p>
@@ -330,7 +372,7 @@ const ManageShippers = ({ onMessage }: ManageShippersProps) => {
                           <TableHead className="text-[10px] uppercase">Cargo</TableHead>
                           <TableHead className="text-[10px] uppercase">Route</TableHead>
                           <TableHead className="text-[10px] uppercase">Date</TableHead>
-                          <TableHead className="text-[10px] uppercase">Status</TableHead>
+                          <TableHead className="text-[10px] uppercase text-right">Action</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -347,6 +389,16 @@ const ManageShippers = ({ onMessage }: ManageShippersProps) => {
                                 {booking.status?.replace('_', ' ')}
                               </Badge>
                             </TableCell>
+                            <TableCell className="text-right">
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                className="h-8 w-8 p-0"
+                                onClick={() => handleViewBooking(booking)}
+                              >
+                                <Eye className="h-4 w-4" />
+                              </Button>
+                            </TableCell>
                           </TableRow>
                         ))}
                       </TableBody>
@@ -361,6 +413,79 @@ const ManageShippers = ({ onMessage }: ManageShippersProps) => {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Booking Details Dialog (Nested) */}
+      <Dialog open={bookingDetailOpen} onOpenChange={setBookingDetailOpen}>
+        <DialogContent className="max-w-2xl max-h-[85vh] overflow-y-auto z-[60]">
+          <DialogHeader>
+            <DialogTitle>Booking Details - {selectedBookingDetail?.id.slice(0, 8)}</DialogTitle>
+          </DialogHeader>
+          {selectedBookingDetail && (
+            <div className="space-y-6 py-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="space-y-4">
+                  <div className="bg-muted/30 p-4 rounded-lg border">
+                    <h4 className="font-bold text-sm uppercase text-muted-foreground mb-3">Load Information</h4>
+                    <div className="grid grid-cols-2 gap-y-2 text-sm">
+                      <span className="text-muted-foreground">Cargo Type:</span>
+                      <span className="capitalize">{selectedBookingDetail.cargo_type}</span>
+                      <span className="text-muted-foreground">Dimensions:</span>
+                      <span>{selectedBookingDetail.dimensions_length_ft}' x {selectedBookingDetail.dimensions_width_ft}' x {selectedBookingDetail.dimensions_height_ft}'</span>
+                      <span className="text-muted-foreground">Weight:</span>
+                      <span>{selectedBookingDetail.weight_lbs?.toLocaleString()} lbs</span>
+                      <span className="text-muted-foreground">Escort Req:</span>
+                      <span>{selectedBookingDetail.requires_escort ? 'Yes' : 'No'}</span>
+                    </div>
+                  </div>
+
+                  <div className="bg-muted/30 p-4 rounded-lg border">
+                    <h4 className="font-bold text-sm uppercase text-muted-foreground mb-3">Route & Schedule</h4>
+                    <div className="space-y-2 text-sm">
+                      <div>
+                        <p className="text-xs text-muted-foreground font-bold italic">PICKUP</p>
+                        <p className="font-medium">{selectedBookingDetail.pickup_address}</p>
+                        <p className="text-xs text-muted-foreground">{selectedBookingDetail.pickup_city}, {selectedBookingDetail.pickup_state}</p>
+                      </div>
+                      <div className="pt-2 border-t border-muted">
+                        <p className="text-xs text-muted-foreground font-bold italic">DELIVERY</p>
+                        <p className="font-medium">{selectedBookingDetail.delivery_address}</p>
+                        <p className="text-xs text-muted-foreground">{selectedBookingDetail.delivery_city}, {selectedBookingDetail.delivery_state}</p>
+                      </div>
+                      <div className="pt-2 border-t border-muted">
+                        <p className="text-xs text-muted-foreground font-bold">SHIPMENT DATE</p>
+                        <p className="font-bold text-primary">{new Date(selectedBookingDetail.shipment_date).toLocaleDateString()}</p>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-4">
+                  <div className="bg-muted/30 p-4 rounded-lg border">
+                    <h4 className="font-bold text-sm uppercase text-muted-foreground mb-3">Current Status</h4>
+                    <div className="flex flex-col gap-2">
+                      <Badge variant="outline" className="w-fit text-sm py-1 px-3 bg-secondary/20">
+                        {selectedBookingDetail.status?.replace('_', ' ').toUpperCase()}
+                      </Badge>
+                      <p className="text-xs text-muted-foreground">Last updated: {new Date(selectedBookingDetail.updated_at).toLocaleString()}</p>
+                    </div>
+                  </div>
+
+                  <div className="bg-muted/30 p-4 rounded-lg border">
+                    <h4 className="font-bold text-sm uppercase text-muted-foreground mb-3">Special Instructions</h4>
+                    <p className="text-sm italic text-muted-foreground leading-relaxed">
+                      {selectedBookingDetail.special_instructions || 'No special instructions provided for this shipment.'}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setBookingDetailOpen(false)}>Back to List</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
     </div>
   );
 };

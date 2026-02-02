@@ -6,6 +6,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import api from "@/lib/api";
 import { useAuth } from "@/contexts/AuthContext";
 import { toast } from "sonner";
+import ProviderProfileDialog from "./admin/ProviderProfileDialog";
 
 interface MessagingSectionProps {
   initialContext?: { bookingId: string | null; participantId: string } | null;
@@ -21,6 +22,8 @@ const MessagingSection = ({ initialContext, initialConversationId }: MessagingSe
   const [searchQuery, setSearchQuery] = useState("");
   const [loading, setLoading] = useState(true);
   const [loadingMessages, setLoadingMessages] = useState(false);
+  const [viewProfileId, setViewProfileId] = useState<string | null>(null);
+  const [profileDialogOpen, setProfileDialogOpen] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -155,7 +158,7 @@ const MessagingSection = ({ initialContext, initialConversationId }: MessagingSe
     <div className="bg-card rounded-xl border border-border overflow-hidden h-[calc(100vh-220px)]">
       <div className="flex h-full">
         {/* Conversations List */}
-        <div className="w-80 border-r border-border flex flex-col">
+        <div className="w-full md:w-80 border-r border-border flex flex-col shrink-0">
           <div className="p-4 border-b border-border">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" size={18} />
@@ -183,27 +186,42 @@ const MessagingSection = ({ initialContext, initialConversationId }: MessagingSe
                     }`}
                 >
                   <div className="flex gap-3">
-                    <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
-                      <span className="text-sm font-bold text-primary">
-                        {conv.other_user_name.charAt(0)}
-                      </span>
+                    <div
+                      className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0 font-bold text-primary overflow-hidden cursor-pointer hover:ring-2 hover:ring-primary transition-all z-10"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (conv.other_user_id) {
+                          setViewProfileId(conv.other_user_id);
+                          setProfileDialogOpen(true);
+                        }
+                      }}
+                    >
+                      {conv.other_user_avatar ? (
+                        <img
+                          src={conv.other_user_avatar}
+                          alt="Avatar"
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        conv.other_user_name?.charAt(0) || conv.other_user_company?.charAt(0) || "?"
+                      )}
                     </div>
                     <div className="flex-1 min-w-0">
                       <div className="flex items-center justify-between mb-1">
                         <span className="font-semibold truncate">
-                          {conv.other_user_company || conv.other_user_name}
+                          {conv.other_user_role === 'carrier' ? (conv.other_user_company || conv.other_user_name) : (conv.other_user_name || conv.other_user_company)}
                         </span>
-                        <span className="text-xs text-muted-foreground">
+                        <span className="text-[10px] text-muted-foreground whitespace-nowrap ml-2">
                           {conv.last_message_time ? new Date(conv.last_message_time).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ''}
                         </span>
                       </div>
                       <p className="text-sm text-muted-foreground truncate">{conv.last_message || "No messages yet"}</p>
-                      <p className="text-xs text-primary font-medium mt-1 uppercase tracking-tighter">
-                        {conv.cargo_type || "Direct Message"}
+                      <p className="text-[10px] text-primary font-bold mt-1 uppercase tracking-tighter">
+                        {conv.other_user_role} {conv.cargo_type ? `• ${conv.cargo_type}` : "• Direct"}
                       </p>
                     </div>
                     {conv.unread_count > 0 && (
-                      <div className="w-5 h-5 rounded-full bg-primary text-primary-foreground text-xs flex items-center justify-center">
+                      <div className="w-5 h-5 rounded-full bg-primary text-primary-foreground text-[10px] flex items-center justify-center font-bold">
                         {conv.unread_count}
                       </div>
                     )}
@@ -221,10 +239,26 @@ const MessagingSection = ({ initialContext, initialConversationId }: MessagingSe
               {/* Chat Header */}
               <div className="p-4 border-b border-border bg-card flex items-center justify-between shadow-sm">
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
-                    <span className="text-sm font-bold text-primary">
-                      {selectedConversation.other_user_name.charAt(0)}
-                    </span>
+                  <div
+                    className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center overflow-hidden cursor-pointer hover:ring-2 hover:ring-primary transition-all"
+                    onClick={() => {
+                      if (selectedConversation.other_user_id) {
+                        setViewProfileId(selectedConversation.other_user_id);
+                        setProfileDialogOpen(true);
+                      }
+                    }}
+                  >
+                    {selectedConversation.other_user_avatar ? (
+                      <img
+                        src={selectedConversation.other_user_avatar}
+                        alt="Avatar"
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <span className="text-sm font-bold text-primary">
+                        {selectedConversation.other_user_name.charAt(0)}
+                      </span>
+                    )}
                   </div>
                   <div>
                     <h3 className="font-semibold">{selectedConversation.other_user_company || selectedConversation.other_user_name}</h3>
@@ -301,6 +335,12 @@ const MessagingSection = ({ initialContext, initialConversationId }: MessagingSe
           )}
         </div>
       </div>
+
+      <ProviderProfileDialog
+        providerId={viewProfileId}
+        open={profileDialogOpen}
+        onOpenChange={setProfileDialogOpen}
+      />
     </div>
   );
 };
