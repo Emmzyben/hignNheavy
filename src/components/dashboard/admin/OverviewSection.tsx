@@ -4,7 +4,7 @@ import {
     Users, Truck, Car, Package,
     TrendingUp, AlertCircle, Loader2,
     MapPin, Calendar, ChevronRight, Info,
-    CheckCircle2,
+    CheckCircle2, Clock,
     User
 } from "lucide-react";
 import ProviderProfileDialog from "./ProviderProfileDialog";
@@ -13,6 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import api from "@/lib/api";
 import { toast } from "sonner";
+import Loader from "@/components/ui/Loader";
 
 interface OverviewSectionProps {
     setActiveSection: (section: string) => void;
@@ -32,6 +33,18 @@ const OverviewSection = ({ setActiveSection }: OverviewSectionProps) => {
     const [isAssigning, setIsAssigning] = useState(false);
     const [viewProviderId, setViewProviderId] = useState<string | null>(null);
     const [profileDialogOpen, setProfileDialogOpen] = useState(false);
+    const [walletStats, setWalletStats] = useState({ balance: 0, pending: 0 });
+
+    const fetchWalletStats = async () => {
+        try {
+            const response = await api.get("/wallets/admin/all");
+            if (response.data.success) {
+                setWalletStats(response.data.data.totals);
+            }
+        } catch (error) {
+            console.error("Failed to fetch wallet stats");
+        }
+    };
 
     const fetchStats = async () => {
         setLoading(true);
@@ -49,6 +62,7 @@ const OverviewSection = ({ setActiveSection }: OverviewSectionProps) => {
 
     useEffect(() => {
         fetchStats();
+        fetchWalletStats();
     }, []);
 
     const handleOpenAssignment = async (booking: any) => {
@@ -98,14 +112,14 @@ const OverviewSection = ({ setActiveSection }: OverviewSectionProps) => {
     const stats = [
         { label: "Total Shippers", value: statsData?.shippers || "0", icon: Users, color: "text-blue-500", bg: "bg-blue-500/10", section: "shippers" },
         { label: "Active Carriers", value: statsData?.carriers || "0", icon: Truck, color: "text-green-500", bg: "bg-green-500/10", section: "carriers" },
-        { label: "Escort Drivers", value: statsData?.escorts || "0", icon: Car, color: "text-purple-500", bg: "bg-purple-500/10", section: "escorts" },
-        { label: "Total Bookings", value: statsData?.bookings || "0", icon: Package, color: "text-orange-500", bg: "bg-orange-500/10", section: "bookings" },
+        { label: "System Balance", value: `$${walletStats.balance.toLocaleString()}`, icon: TrendingUp, color: "text-purple-500", bg: "bg-purple-500/10", section: "payouts" },
+        { label: "Pending Funds", value: `$${walletStats.pending.toLocaleString()}`, icon: Clock, color: "text-orange-500", bg: "bg-orange-500/10", section: "payouts" },
     ];
 
     if (loading && !statsData) {
         return (
             <div className="flex items-center justify-center p-20">
-                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                <Loader size="lg" text="Analyzing Data..." />
             </div>
         );
     }
@@ -209,7 +223,7 @@ const OverviewSection = ({ setActiveSection }: OverviewSectionProps) => {
                     <div className="flex-1 overflow-y-auto p-6 space-y-8">
                         {loadingQuotes ? (
                             <div className="flex justify-center p-12">
-                                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                                <Loader size="md" text="Loading Bids..." />
                             </div>
                         ) : (
                             <>
@@ -381,7 +395,7 @@ const OverviewSection = ({ setActiveSection }: OverviewSectionProps) => {
                             onClick={handleAssign}
                             disabled={isAssigning || !selectedCarrierQuote}
                         >
-                            {isAssigning ? <Loader2 className="mr-2 animate-spin h-4 w-4" /> : <CheckCircle2 className="mr-2 h-4 w-4" />}
+                            {isAssigning ? <Loader size="sm" text="" /> : <CheckCircle2 className="mr-2 h-4 w-4" />}
                             Confirm Selection
                         </Button>
                     </DialogFooter>

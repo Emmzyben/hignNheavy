@@ -34,7 +34,6 @@ const MENU_ITEMS: Record<string, any[]> = {
         { id: 'bookings', label: 'Available Bookings', icon: ClipboardList },
         { id: 'drivers', label: 'Manage Drivers', icon: Users },
         { id: 'equipment', label: 'Equipment', icon: Truck },
-        { id: 'payouts', label: 'Payouts', icon: DollarSign },
         { id: 'wallet', label: 'Wallet', icon: Wallet },
         { id: 'messages', label: 'Messages', icon: MessageSquare },
         { id: 'reviews', label: 'Reviews', icon: Star },
@@ -42,8 +41,6 @@ const MENU_ITEMS: Record<string, any[]> = {
     escort: [
         { id: 'available', label: 'Available Jobs', icon: FileText },
         { id: 'vehicles', label: 'My Vehicles', icon: Car },
-
-        { id: 'payouts', label: 'Payouts', icon: DollarSign },
         { id: 'wallet', label: 'Wallet', icon: Wallet },
         { id: 'messages', label: 'Messages', icon: MessageSquare },
         { id: 'reviews', label: 'Reviews', icon: Star },
@@ -55,7 +52,7 @@ const MENU_ITEMS: Record<string, any[]> = {
         { id: 'carriers', label: 'Manage Carriers', icon: Truck },
         { id: 'escorts', label: 'Manage Escorts', icon: Car },
         { id: 'bookings', label: 'All Bookings', icon: Package },
-        { id: 'payouts', label: 'Payouts', icon: Wallet },
+        { id: 'payouts', label: 'Financial Center', icon: Wallet },
         { id: 'messages', label: 'Messages', icon: MessageSquare },
     ],
     driver: [
@@ -90,12 +87,13 @@ const DashboardLayout = ({ children, activeSection, onSectionChange, onMessage, 
     };
 
     const handleNavClick = (id: string) => {
-        if (isProfilePage) {
-            const dashboardPath = `/dashboard/${role}`;
-            // In a real app we might pass state, but simplicity for now:
-            navigate(dashboardPath);
-        } else if (onSectionChange) {
+        const isSubPage = isProfilePage || location.pathname.includes('/job/') || location.pathname.includes('/shipment/') || location.pathname.includes('/request/') || location.pathname.includes('/booking/');
+
+        if (onSectionChange && !isSubPage) {
             onSectionChange(id);
+        } else {
+            const dashboardPath = `/dashboard/${role}`;
+            navigate(`${dashboardPath}?section=${id}`);
         }
         setMobileMenuOpen(false);
     };

@@ -18,6 +18,7 @@ import {
   Eye,
   FileCheck,
 } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -41,6 +42,7 @@ import {
 import { toast } from "sonner";
 import api from "@/lib/api";
 import ProviderProfileDialog from "../admin/ProviderProfileDialog";
+import Loader from "@/components/ui/Loader";
 
 type BookingTab = 'available' | 'my-quotes' | 'won-jobs';
 
@@ -49,6 +51,7 @@ interface AvailableBookingsProps {
 }
 
 const AvailableBookings: React.FC<AvailableBookingsProps> = ({ onMessage }) => {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<BookingTab>('available');
   const [bookings, setBookings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -157,8 +160,7 @@ const AvailableBookings: React.FC<AvailableBookingsProps> = ({ onMessage }) => {
   };
 
   const openDetailsDialog = (booking: any) => {
-    setSelectedBooking(booking);
-    setDetailsDialogOpen(true);
+    navigate(`/dashboard/escort/job/${booking.id}`);
   };
 
   const handleOpenShipperProfile = (shipperId: string) => {
@@ -217,8 +219,7 @@ const AvailableBookings: React.FC<AvailableBookingsProps> = ({ onMessage }) => {
       <div className="space-y-4">
         {loading ? (
           <div className="flex flex-col items-center justify-center py-12">
-            <Loader2 className="h-8 w-8 animate-spin text-primary mb-2" />
-            <p className="text-muted-foreground">Fetching records...</p>
+            <Loader size="md" text="Fetching records..." />
           </div>
         ) : bookings.length === 0 ? (
           <Card>
@@ -300,20 +301,9 @@ const AvailableBookings: React.FC<AvailableBookingsProps> = ({ onMessage }) => {
                           <Badge className="bg-green-500/20 text-green-600 border-0">Assigned</Badge>
                         </div>
                         <div className="flex flex-col gap-2">
-                          <Select
-                            value={booking.status}
-                            onValueChange={(val) => handleUpdateBookingStatus(booking.id, val)}
-                          >
-                            <SelectTrigger className="w-[140px] h-8 text-xs">
-                              <SelectValue placeholder="Update Status" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="booked">Booked</SelectItem>
-                              <SelectItem value="in_transit">In Transit</SelectItem>
-                              <SelectItem value="delivered">Delivered</SelectItem>
-                              <SelectItem value="completed">Completed</SelectItem>
-                            </SelectContent>
-                          </Select>
+                          <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 justify-center h-8 uppercase text-[10px] font-bold tracking-widest">
+                            {booking.status.replace('_', ' ')}
+                          </Badge>
                           {onMessage && (
                             <Button
                               variant="outline"
@@ -324,9 +314,6 @@ const AvailableBookings: React.FC<AvailableBookingsProps> = ({ onMessage }) => {
                               <MessageSquare size={14} /> Chat Shipper
                             </Button>
                           )}
-                          <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 justify-center">
-                            {booking.status.replace('_', ' ')}
-                          </Badge>
                         </div>
                       </div>
                     )}
@@ -338,167 +325,7 @@ const AvailableBookings: React.FC<AvailableBookingsProps> = ({ onMessage }) => {
         )}
       </div>
 
-      {/* Booking Details Dialog */}
-      <Dialog open={detailsDialogOpen} onOpenChange={setDetailsDialogOpen}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Job Details - {selectedBooking?.id.split('-')[0]}</DialogTitle>
-          </DialogHeader>
-          {selectedBooking && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-4">
-              <div className="space-y-4">
-                <div>
-                  <h4 className="text-sm font-bold text-muted-foreground uppercase mb-2">Route Information</h4>
-                  <div className="space-y-3">
-                    <div className="flex gap-2">
-                      <MapPin className="h-4 w-4 text-primary shrink-0 mt-1" />
-                      <div>
-                        <p className="text-xs text-muted-foreground">Pickup</p>
-                        <p className="text-sm font-medium">{selectedBooking.pickup_address}</p>
-                        <p className="text-sm text-muted-foreground">{selectedBooking.pickup_city}, {selectedBooking.pickup_state}</p>
-                      </div>
-                    </div>
-                    <div className="flex gap-2">
-                      <MapPin className="h-4 w-4 text-green-600 shrink-0 mt-1" />
-                      <div>
-                        <p className="text-xs text-muted-foreground">Delivery</p>
-                        <p className="text-sm font-medium">{selectedBooking.delivery_address}</p>
-                        <p className="text-sm text-muted-foreground">{selectedBooking.delivery_city}, {selectedBooking.delivery_state}</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
 
-                <div>
-                  <h4 className="text-sm font-bold text-muted-foreground uppercase mb-2">Job Schedule</h4>
-                  <div className="flex justify-between text-sm p-2 bg-muted/30 rounded border">
-                    <span className="text-muted-foreground font-medium">Shipment Date:</span>
-                    <span className="font-bold">{new Date(selectedBooking.shipment_date).toLocaleDateString()}</span>
-                  </div>
-                </div>
-              </div>
-
-              <div className="space-y-4">
-                <div>
-                  <h4 className="text-sm font-bold text-muted-foreground uppercase mb-2">Load Specs</h4>
-                  <div className="space-y-1 text-sm bg-muted/30 p-3 rounded-lg border">
-                    <div className="flex justify-between"><span>Type:</span> <span className="font-medium">{selectedBooking.cargo_type}</span></div>
-                    <div className="flex justify-between"><span>Weight:</span> <span className="font-medium">{Number(selectedBooking.weight_lbs).toLocaleString()} lbs</span></div>
-                    <div className="flex justify-between"><span>Size:</span> <span className="font-medium">{selectedBooking.dimensions_length_ft}L x {selectedBooking.dimensions_width_ft}W x {selectedBooking.dimensions_height_ft}H ft</span></div>
-                  </div>
-                </div>
-
-                <div>
-                  <h4 className="text-sm font-bold text-muted-foreground uppercase mb-2">Special Notes</h4>
-                  <p className="text-sm italic text-muted-foreground p-3 bg-yellow-50/50 border border-yellow-100 rounded-lg">
-                    {selectedBooking.special_instructions || "No special instructions provided."}
-                  </p>
-                </div>
-
-                <div className="pt-2">
-                  <h4 className="text-sm font-bold text-muted-foreground uppercase mb-2">Shipper Contacts</h4>
-                  <button
-                    onClick={() => handleOpenShipperProfile(selectedBooking.shipper_id)}
-                    className="flex items-center gap-2 group transition-colors"
-                  >
-                    <div className="p-1.5 bg-primary/10 rounded-full group-hover:bg-primary/20">
-                      <User className="h-4 w-4 text-primary" />
-                    </div>
-                    <span className="text-sm font-medium group-hover:text-primary group-hover:underline">{selectedBooking.shipper_name}</span>
-                    <ExternalLink size={14} className="text-muted-foreground group-hover:text-primary" />
-                  </button>
-                </div>
-              </div>
-
-              {(selectedBooking.status === 'delivered' || selectedBooking.status === 'completed') && (
-                <div className="mt-4 border-t pt-4 space-y-4">
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className="p-2 bg-green-100 rounded-lg">
-                      <FileCheck className="text-green-600" size={18} />
-                    </div>
-                    <h4 className="font-bold text-sm">Delivery Proof</h4>
-                  </div>
-
-                  {selectedBooking.delivery_photos && (
-                    <div className="space-y-2">
-                      <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-                        <Camera size={12} /> Delivery Photos
-                      </p>
-                      <div className="grid grid-cols-3 gap-2">
-                        {(() => {
-                          try {
-                            const photos = typeof selectedBooking.delivery_photos === 'string'
-                              ? JSON.parse(selectedBooking.delivery_photos)
-                              : selectedBooking.delivery_photos;
-
-                            return Array.isArray(photos) && photos.map((photo: string, idx: number) => (
-                              <div key={idx} className="aspect-video rounded-md overflow-hidden bg-muted group relative border">
-                                <img
-                                  src={photo}
-                                  alt={`Delivery ${idx + 1}`}
-                                  className="w-full h-full object-cover"
-                                />
-                                <a
-                                  href={photo}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity"
-                                >
-                                  <Eye className="text-white" size={16} />
-                                </a>
-                              </div>
-                            ));
-                          } catch (e) {
-                            return <p className="text-[10px] text-muted-foreground">Error loading photos</p>;
-                          }
-                        })()}
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="grid grid-cols-2 gap-3">
-                    <div className="bg-muted/30 p-2 rounded-md border">
-                      <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-0.5">Receiver</p>
-                      <p className="font-bold text-xs">{selectedBooking.receiver_name || 'Not provided'}</p>
-                    </div>
-                    <div className="bg-muted/30 p-2 rounded-md border">
-                      <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-0.5">Delivered On</p>
-                      <p className="font-bold text-[10px]">
-                        {selectedBooking.updated_at
-                          ? new Date(selectedBooking.updated_at).toLocaleString()
-                          : 'TBD'}
-                      </p>
-                    </div>
-                  </div>
-
-                  {selectedBooking.delivery_signature && (
-                    <div className="space-y-2">
-                      <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-                        <Pencil size={12} /> Digital Signature
-                      </p>
-                      <div className="bg-white rounded-md border p-2 flex items-center justify-center">
-                        <img
-                          src={selectedBooking.delivery_signature}
-                          alt="Receiver Signature"
-                          className="max-h-16 object-contain"
-                        />
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDetailsDialogOpen(false)}>Close</Button>
-            {activeTab === 'available' && (
-              <Button onClick={() => { setDetailsDialogOpen(false); openQuoteDialog(selectedBooking); }}>
-                Submit Quote
-              </Button>
-            )}
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       {/* Submit Quote Dialog */}
       <Dialog open={quoteDialogOpen} onOpenChange={setQuoteDialogOpen}>
@@ -557,7 +384,7 @@ const AvailableBookings: React.FC<AvailableBookingsProps> = ({ onMessage }) => {
           <DialogFooter>
             <Button variant="outline" onClick={() => setQuoteDialogOpen(false)} disabled={isSubmitting}>Cancel</Button>
             <Button onClick={handleSubmitQuote} disabled={isSubmitting}>
-              {isSubmitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <><Send className="h-4 w-4 mr-2" /> Submit Quote</>}
+              {isSubmitting ? <Loader size="sm" text="" /> : <><Send className="h-4 w-4 mr-2" /> Submit Quote</>}
             </Button>
           </DialogFooter>
         </DialogContent>

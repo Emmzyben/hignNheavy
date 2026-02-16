@@ -13,6 +13,7 @@ import {
     PenTool,
     Loader2
 } from "lucide-react";
+import Loader from "@/components/ui/Loader";
 import { toast } from "sonner";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import imageCompression from 'browser-image-compression';
@@ -251,7 +252,7 @@ const DriverCompleteDelivery = () => {
                                 onClick={() => fileInputRef.current?.click()}
                                 disabled={isUploadingPhoto || photos.length >= 5}
                             >
-                                {isUploadingPhoto ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Upload className="w-4 h-4 mr-2" />}
+                                {isUploadingPhoto ? <Loader size="sm" text="" /> : <Upload className="w-4 h-4 mr-2" />}
                                 {isUploadingPhoto ? "Uploading..." : "Upload from Device"}
                             </Button>
                         </Card>
@@ -329,7 +330,7 @@ const DriverCompleteDelivery = () => {
                             onClick={handleComplete}
                             disabled={isSubmitting}
                         >
-                            {isSubmitting ? "Processing..." : "Complete Delivery"}
+                            {isSubmitting ? <Loader size="sm" text="" /> : "Complete Delivery"}
                         </Button>
                     </div>
                 </div>

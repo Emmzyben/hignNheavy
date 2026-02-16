@@ -11,7 +11,6 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
-    Loader2,
     User,
     Mail,
     Phone,
@@ -32,6 +31,7 @@ import {
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import api from "@/lib/api";
 import { toast } from "sonner";
+import Loader from "@/components/ui/Loader";
 
 interface ProviderProfileDialogProps {
     providerId: string | null;
@@ -128,8 +128,7 @@ const ProviderProfileDialog = ({ providerId, open, onOpenChange, onMessage }: Pr
 
                 {loading ? (
                     <div className="flex flex-col items-center justify-center py-20 gap-4">
-                        <Loader2 className="h-10 w-10 animate-spin text-primary" />
-                        <p className="text-muted-foreground animate-pulse">Fetching provider credentials...</p>
+                        <Loader size="lg" text="Fetching provider credentials..." />
                     </div>
                 ) : profile ? (
                     <div className="space-y-8 py-4">
@@ -291,7 +290,7 @@ const ProviderProfileDialog = ({ providerId, open, onOpenChange, onMessage }: Pr
 
                                     <TabsContent value="fleet" className="pt-6">
                                         {loadingSecondary ? (
-                                            <div className="flex justify-center py-12"><Loader2 className="animate-spin" /></div>
+                                            <div className="flex justify-center py-12"><Loader size="md" text="" /></div>
                                         ) : vehicles.length === 0 ? (
                                             <div className="text-center py-12 bg-muted/20 border-dashed border-2 rounded-xl">
                                                 <Truck className="mx-auto h-12 w-12 text-muted-foreground opacity-20 mb-4" />
@@ -346,7 +345,7 @@ const ProviderProfileDialog = ({ providerId, open, onOpenChange, onMessage }: Pr
 
                                     <TabsContent value="drivers" className="pt-6">
                                         {loadingSecondary ? (
-                                            <div className="flex justify-center py-12"><Loader2 className="animate-spin" /></div>
+                                            <div className="flex justify-center py-12"><Loader size="md" text="" /></div>
                                         ) : drivers.length === 0 ? (
                                             <div className="text-center py-12 bg-muted/20 border-dashed border-2 rounded-xl">
                                                 <Users className="mx-auto h-12 w-12 text-muted-foreground opacity-20 mb-4" />
@@ -424,7 +423,7 @@ const ProviderProfileDialog = ({ providerId, open, onOpenChange, onMessage }: Pr
 
                                     <TabsContent value="reviews" className="pt-6">
                                         {loadingSecondary ? (
-                                            <div className="flex justify-center py-12"><Loader2 className="animate-spin" /></div>
+                                            <div className="flex justify-center py-12"><Loader size="md" text="" /></div>
                                         ) : (
                                             <div className="space-y-6">
                                                 {/* Summary Card */}

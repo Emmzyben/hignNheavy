@@ -7,7 +7,6 @@ import {
   CheckCircle,
   XCircle,
   AlertCircle,
-  Loader2,
   Eye,
   Calendar,
   Package,
@@ -35,6 +34,7 @@ import {
 import { toast } from "sonner";
 import api from "@/lib/api";
 import EquipmentImageUploader from "../EquipmentImageUploader";
+import Loader from "@/components/ui/Loader";
 
 const vehicleTypes = ["Pickup Truck", "SUV", "Van", "Pilot Car"];
 
@@ -200,8 +200,7 @@ const VehiclesManagement = () => {
 
       {loading ? (
         <div className="flex flex-col items-center justify-center py-20">
-          <Loader2 className="h-10 w-10 animate-spin text-primary opacity-20" />
-          <p className="text-muted-foreground mt-4">Loading your fleet...</p>
+          <Loader size="lg" text="Loading your fleet..." />
         </div>
       ) : vehicles.length === 0 ? (
         <Card className="border-dashed">
@@ -274,7 +273,7 @@ const VehiclesManagement = () => {
                     onClick={() => handleDelete(vehicle.id)}
                     disabled={isDeleting === vehicle.id}
                   >
-                    {isDeleting === vehicle.id ? <Loader2 className="h-3 w-3 animate-spin" /> : <Trash2 className="h-3 w-3" />}
+                    {isDeleting === vehicle.id ? <Loader size="sm" text="" /> : <Trash2 className="h-3 w-3" />}
                   </Button>
                 </div>
               </CardContent>
@@ -381,7 +380,7 @@ const VehiclesManagement = () => {
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)} disabled={isSaving}>Cancel</Button>
             <Button onClick={handleSave} disabled={isSaving}>
-              {isSaving ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+              {isSaving ? <Loader size="sm" text="" className="mr-2" /> : null}
               {editingVehicle ? "Save Changes" : "Register Vehicle"}
             </Button>
           </DialogFooter>

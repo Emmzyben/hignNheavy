@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { useNavigate } from "react-router-dom";
 import { Bell, CheckCheck, Trash2 } from "lucide-react";
 import { toast } from "sonner";
+import Loader from "@/components/ui/Loader";
 
 interface Notification {
     id: string;
@@ -117,7 +118,7 @@ const Notifications = () => {
 
                 {loading ? (
                     <div className="flex justify-center py-12">
-                        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                        <Loader size="md" text="Fetching notifications..." />
                     </div>
                 ) : notifications.length === 0 ? (
                     <div className="text-center py-16 bg-muted/30 rounded-lg border border-dashed">

@@ -13,6 +13,7 @@ import {
   Star,
   Loader2
 } from "lucide-react";
+import Loader from "@/components/ui/Loader";
 import DriverBottomNav from "@/components/driver/DriverBottomNav";
 import { useAuth } from "@/contexts/AuthContext";
 import ProfileImageUploader from "@/components/ProfileImageUploader";
@@ -46,7 +47,7 @@ const DriverProfile = () => {
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-screen">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        <Loader size="lg" text="Fetching Profile..." />
       </div>
     );
   }
@@ -61,7 +62,7 @@ const DriverProfile = () => {
     completedTrips: driverDetails?.completed_jobs || 0,
     pendingTrips: 0, // Placeholder
     carrier: driverDetails?.employer_name || "Independent",
-  }; 
+  };
 
   const stats = [
     { label: "Completed", value: driver.completedTrips, icon: CheckCircle, color: "text-green-600" },

@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 import heroImage from "@/assets/hero.svg";
+import Loader from "@/components/ui/Loader";
 
 const ResetPassword = () => {
     const [searchParams] = useSearchParams();
@@ -72,7 +73,7 @@ const ResetPassword = () => {
                                 />
                             </div>
                             <Button type="submit" className="w-full" disabled={loading}>
-                                {loading ? "Resetting..." : "Reset Password"}
+                                {loading ? <Loader size="sm" text="Resetting..." /> : "Reset Password"}
                             </Button>
                         </form>
                     </div>

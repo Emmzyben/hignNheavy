@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { toast } from "sonner";
-import { ArrowRight, ArrowLeft, Check, Loader2 } from "lucide-react";
+import { ArrowRight, ArrowLeft, Check } from "lucide-react";
+import Loader from "@/components/ui/Loader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -24,15 +25,16 @@ import {
 } from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import api from "@/lib/api";
+import { texasCities } from "@/lib/texasCities";
 
 const formSchema = z.object({
   // Step 1: Locations
   pickupAddress: z.string().min(5, "Please enter a valid pickup address"),
   pickupCity: z.string().min(2, "Please enter a city"),
-  pickupState: z.string().min(2, "Please select a state"),
+  pickupState: z.string().default("Texas"),
   deliveryAddress: z.string().min(5, "Please enter a valid delivery address"),
   deliveryCity: z.string().min(2, "Please enter a city"),
-  deliveryState: z.string().min(2, "Please select a state"),
+  deliveryState: z.string().default("Texas"),
   // Step 2: Cargo Details
   cargoType: z.string().min(1, "Please select cargo type"),
   cargoDescription: z.string().min(10, "Please describe your cargo"),
@@ -69,10 +71,10 @@ const NewBooking = ({ initialData, onSuccess, onCancel }: NewBookingProps) => {
     defaultValues: {
       pickupAddress: initialData?.pickup_address || "",
       pickupCity: initialData?.pickup_city || "",
-      pickupState: initialData?.pickup_state || "",
+      pickupState: "Texas",
       deliveryAddress: initialData?.delivery_address || "",
       deliveryCity: initialData?.delivery_city || "",
-      deliveryState: initialData?.delivery_state || "",
+      deliveryState: "Texas",
       cargoType: initialData?.cargo_type || "",
       cargoDescription: initialData?.cargo_description || "",
       length: initialData?.dimensions_length_ft?.toString() || "",
@@ -85,6 +87,26 @@ const NewBooking = ({ initialData, onSuccess, onCancel }: NewBookingProps) => {
       specialInstructions: initialData?.special_instructions || "",
     },
   });
+
+  const values = form.watch();
+
+  // Force Texas state
+  useEffect(() => {
+    form.setValue("pickupState", "Texas");
+    form.setValue("deliveryState", "Texas");
+  }, [form]);
+
+  // Handle automatic escort requirement
+  const length = parseFloat(values.length) || 0;
+  const width = parseFloat(values.width) || 0;
+  const height = parseFloat(values.height) || 0;
+  const isEscortRequired = length > 110 || width > 14 || height > 17;
+
+  useEffect(() => {
+    if (isEscortRequired) {
+      form.setValue("requiresEscort", true);
+    }
+  }, [isEscortRequired, form]);
 
   const onSubmit = async (data: z.infer<typeof formSchema>) => {
     setIsLoading(true);
@@ -141,8 +163,6 @@ const NewBooking = ({ initialData, onSuccess, onCancel }: NewBookingProps) => {
       setCurrentStep(currentStep - 1);
     }
   };
-
-  const values = form.watch();
 
   return (
     <div className="max-w-4xl mx-auto">
@@ -202,12 +222,12 @@ const NewBooking = ({ initialData, onSuccess, onCancel }: NewBookingProps) => {
                   />
                   <FormField
                     control={form.control}
-                    name="pickupCity"
+                    name="pickupState"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>City</FormLabel>
+                        <FormLabel>State</FormLabel>
                         <FormControl>
-                          <Input placeholder="Houston" {...field} />
+                          <Input {...field} readOnly className="bg-muted cursor-not-allowed" />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -215,22 +235,22 @@ const NewBooking = ({ initialData, onSuccess, onCancel }: NewBookingProps) => {
                   />
                   <FormField
                     control={form.control}
-                    name="pickupState"
+                    name="pickupCity"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>State</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormLabel>City</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
                           <FormControl>
                             <SelectTrigger>
-                              <SelectValue placeholder="Select state" />
+                              <SelectValue placeholder="Select city" />
                             </SelectTrigger>
                           </FormControl>
-                          <SelectContent>
-                            <SelectItem value="TX">Texas</SelectItem>
-                            <SelectItem value="OK">Oklahoma</SelectItem>
-                            <SelectItem value="NM">New Mexico</SelectItem>
-                            <SelectItem value="LA">Louisiana</SelectItem>
-                            <SelectItem value="AR">Arkansas</SelectItem>
+                          <SelectContent className="max-h-[200px]">
+                            {texasCities.map((city) => (
+                              <SelectItem key={city} value={city}>
+                                {city}
+                              </SelectItem>
+                            ))}
                           </SelectContent>
                         </Select>
                         <FormMessage />
@@ -256,12 +276,12 @@ const NewBooking = ({ initialData, onSuccess, onCancel }: NewBookingProps) => {
                   />
                   <FormField
                     control={form.control}
-                    name="deliveryCity"
+                    name="deliveryState"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>City</FormLabel>
+                        <FormLabel>State</FormLabel>
                         <FormControl>
-                          <Input placeholder="Dallas" {...field} />
+                          <Input {...field} readOnly className="bg-muted cursor-not-allowed" />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -269,22 +289,22 @@ const NewBooking = ({ initialData, onSuccess, onCancel }: NewBookingProps) => {
                   />
                   <FormField
                     control={form.control}
-                    name="deliveryState"
+                    name="deliveryCity"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>State</FormLabel>
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormLabel>City</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
                           <FormControl>
                             <SelectTrigger>
-                              <SelectValue placeholder="Select state" />
+                              <SelectValue placeholder="Select city" />
                             </SelectTrigger>
                           </FormControl>
-                          <SelectContent>
-                            <SelectItem value="TX">Texas</SelectItem>
-                            <SelectItem value="OK">Oklahoma</SelectItem>
-                            <SelectItem value="NM">New Mexico</SelectItem>
-                            <SelectItem value="LA">Louisiana</SelectItem>
-                            <SelectItem value="AR">Arkansas</SelectItem>
+                          <SelectContent className="max-h-[200px]">
+                            {texasCities.map((city) => (
+                              <SelectItem key={city} value={city}>
+                                {city}
+                              </SelectItem>
+                            ))}
                           </SelectContent>
                         </Select>
                         <FormMessage />
@@ -445,14 +465,25 @@ const NewBooking = ({ initialData, onSuccess, onCancel }: NewBookingProps) => {
                     control={form.control}
                     name="requiresEscort"
                     render={({ field }) => (
-                      <FormItem className="flex items-center gap-2">
-                        <FormControl>
-                          <Checkbox
-                            checked={field.value}
-                            onCheckedChange={field.onChange}
-                          />
-                        </FormControl>
-                        <FormLabel className="!mt-0">I need escort/pilot car services</FormLabel>
+                      <FormItem>
+                        <div className="flex items-center gap-2">
+                          <FormControl>
+                            <Checkbox
+                              checked={isEscortRequired || field.value}
+                              onCheckedChange={field.onChange}
+                              disabled={isEscortRequired}
+                            />
+                          </FormControl>
+                          <FormLabel className="!mt-0 cursor-pointer">
+                            I need escort/pilot car services
+                          </FormLabel>
+                        </div>
+                        {isEscortRequired && (
+                          <p className="text-xs text-amber-600 mt-1 font-medium">
+                            Escort is mandatory for loads exceeding 110' length, 14' width, or 17' height.
+                          </p>
+                        )}
+                        <FormMessage />
                       </FormItem>
                     )}
                   />
@@ -551,10 +582,7 @@ const NewBooking = ({ initialData, onSuccess, onCancel }: NewBookingProps) => {
               ) : (
                 <Button type="submit" disabled={isLoading}>
                   {isLoading ? (
-                    <>
-                      <Loader2 size={18} className="mr-2 animate-spin" />
-                      Submitting...
-                    </>
+                    <Loader size="sm" text="Submitting..." />
                   ) : (
                     <>
                       Submit Booking Request

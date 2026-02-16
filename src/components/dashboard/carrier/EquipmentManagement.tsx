@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Truck, Plus, Edit, Trash2, Calendar, CheckCircle, Loader2, Eye, MapPin, Package, ShieldCheck } from 'lucide-react';
+import { Truck, Plus, Edit, Trash2, Calendar, CheckCircle, Eye, MapPin, Package, ShieldCheck } from 'lucide-react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -10,6 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { toast } from 'sonner';
 import api from '@/lib/api';
 import EquipmentImageUploader from '../EquipmentImageUploader';
+import Loader from '@/components/ui/Loader';
 
 interface Equipment {
   id: string;
@@ -245,8 +246,7 @@ const EquipmentManagement = () => {
       {/* Equipment Grid */}
       {loading ? (
         <div className="flex flex-col items-center justify-center p-12 bg-card border border-dashed rounded-xl">
-          <Loader2 className="h-8 w-8 animate-spin text-primary mb-4" />
-          <p className="text-muted-foreground font-medium">Loading your fleet...</p>
+          <Loader size="md" text="Loading your fleet..." />
         </div>
       ) : equipment.length === 0 ? (
         <div className="text-center p-20 bg-card border border-dashed rounded-xl">
@@ -293,7 +293,7 @@ const EquipmentManagement = () => {
                       onClick={() => handleDelete(item.id)}
                       disabled={isDeleting === item.id}
                     >
-                      {isDeleting === item.id ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
+                      {isDeleting === item.id ? <Loader size="sm" text="" /> : <Trash2 className="h-4 w-4" />}
                     </Button>
                   </div>
                 </div>
@@ -446,7 +446,7 @@ const EquipmentManagement = () => {
           <DialogFooter>
             <Button variant="outline" onClick={() => setDialogOpen(false)} disabled={isSaving}>Cancel</Button>
             <Button onClick={handleSave} disabled={isSaving}>
-              {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              {isSaving && <Loader size="sm" text="" className="mr-2" />}
               {editingEquipment ? 'Save Changes' : 'Add Equipment'}
             </Button>
           </DialogFooter>

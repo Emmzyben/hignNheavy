@@ -1,13 +1,17 @@
-import { useState } from "react";
-import { 
-  CreditCard, 
-  DollarSign, 
-  Calendar, 
+import { useState, useEffect } from "react";
+import api from "@/lib/api";
+import {
+  CreditCard,
+  DollarSign,
+  Calendar,
   AlertCircle,
   CheckCircle2,
   Download,
-  Building2
+  Package,
+  MapPin,
+  Banknote,
 } from "lucide-react";
+import Loader from "@/components/ui/Loader";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -17,78 +21,110 @@ import {
   DialogTitle,
   DialogDescription,
 } from "@/components/ui/dialog";
-import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 
-const outstandingPayments = [
-  {
-    id: "INV-001",
-    bookingId: "BK-005",
-    description: "Mining Equipment Transport - Midland to Houston",
-    amount: 5100,
-    dueDate: "2024-01-30",
-    status: "pending",
-  },
-  {
-    id: "INV-002",
-    bookingId: "BK-003",
-    description: "Wind Turbine Blade Transport - Corpus Christi to Amarillo (Deposit)",
-    amount: 2550,
-    dueDate: "2024-01-22",
-    status: "overdue",
-  },
-];
-
-const paymentHistory = [
-  {
-    id: "PAY-001",
-    bookingId: "BK-001",
-    description: "Construction Equipment Transport",
-    amount: 4500,
-    date: "2024-01-14",
-    method: "Credit Card",
-    status: "completed",
-  },
-  {
-    id: "PAY-002",
-    bookingId: "BK-002",
-    description: "Industrial Machinery Transport",
-    amount: 2800,
-    date: "2024-01-09",
-    method: "Bank Transfer",
-    status: "completed",
-  },
-  {
-    id: "PAY-003",
-    bookingId: "BK-004",
-    description: "Pre-Fab Building Transport",
-    amount: 6200,
-    date: "2024-01-07",
-    method: "Zelle",
-    status: "completed",
-  },
-];
-
 const PaymentSection = () => {
+  const [awaitingPayments, setAwaitingPayments] = useState<any[]>([]);
+  const [paymentHistory, setPaymentHistory] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadingHistory, setLoadingHistory] = useState(true);
   const [paymentDialogOpen, setPaymentDialogOpen] = useState(false);
-  const [selectedInvoice, setSelectedInvoice] = useState<typeof outstandingPayments[0] | null>(null);
-  const [paymentMethod, setPaymentMethod] = useState("card");
+  const [selectedBooking, setSelectedBooking] = useState<any | null>(null);
+  const [paymentMethod, setPaymentMethod] = useState("stripe");
+  const [processing, setProcessing] = useState(false);
 
-  const openPaymentDialog = (invoice: typeof outstandingPayments[0]) => {
-    setSelectedInvoice(invoice);
+  useEffect(() => {
+    fetchAwaitingPayments();
+    fetchPaymentHistory();
+  }, []);
+
+  const fetchAwaitingPayments = async () => {
+    setLoading(true);
+    try {
+      const response = await api.get("/payments/awaiting");
+      if (response.data.success) {
+        setAwaitingPayments(response.data.data);
+      }
+    } catch (error: any) {
+      console.error("Fetch awaiting payments error:", error);
+      toast.error(error.response?.data?.message || "Failed to load awaiting payments");
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchPaymentHistory = async () => {
+    setLoadingHistory(true);
+    try {
+      const response = await api.get("/payments/history");
+      if (response.data.success) {
+        setPaymentHistory(response.data.data);
+      }
+    } catch (error: any) {
+      console.error("Fetch payment history error:", error);
+    } finally {
+      setLoadingHistory(false);
+    }
+  };
+
+  const openPaymentDialog = (booking: any) => {
+    setSelectedBooking(booking);
     setPaymentDialogOpen(true);
   };
 
-  const processPayment = () => {
-    toast.success("Payment processed successfully!", {
-      description: `Invoice ${selectedInvoice?.id} has been paid.`,
-    });
-    setPaymentDialogOpen(false);
+  const processPayment = async () => {
+    if (!selectedBooking) return;
+
+    setProcessing(true);
+    try {
+      const response = await api.post("/payments/process", {
+        bookingId: selectedBooking.id,
+        paymentMethod,
+        paymentDetails: {
+          // Placeholder data - will be replaced with real payment gateway integration
+          note: `Payment for booking ${selectedBooking.id}`
+        }
+      });
+
+      if (response.data.success) {
+        toast.success("Payment processed successfully!", {
+          description: `Your booking is now confirmed.`,
+        });
+        setPaymentDialogOpen(false);
+        fetchAwaitingPayments();
+        fetchPaymentHistory();
+      }
+    } catch (error: any) {
+      console.error("Payment processing error:", error);
+      toast.error(error.response?.data?.message || "Failed to process payment");
+    } finally {
+      setProcessing(false);
+    }
   };
 
-  const totalOutstanding = outstandingPayments.reduce((acc, inv) => acc + inv.amount, 0);
+  const calculateTotals = () => {
+    const totalOutstanding = awaitingPayments.reduce((acc, booking) => {
+      const amount = parseFloat(booking.agreed_price || 0);
+      const fee = amount * 0.15;
+      return acc + amount + fee;
+    }, 0);
+
+    const totalPaid = paymentHistory.reduce((acc, payment) => acc + parseFloat(payment.total_amount || 0), 0);
+
+    return { totalOutstanding, totalPaid };
+  };
+
+  const { totalOutstanding, totalPaid } = calculateTotals();
+
+  if (loading && loadingHistory) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-[400px]">
+        <Loader size="lg" text="Syncing Payments..." />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -111,8 +147,8 @@ const PaymentSection = () => {
               <Calendar className="text-yellow-600" size={24} />
             </div>
             <div>
-              <p className="text-2xl font-bold">{outstandingPayments.length}</p>
-              <p className="text-sm text-muted-foreground">Pending Invoices</p>
+              <p className="text-2xl font-bold">{awaitingPayments.length}</p>
+              <p className="text-sm text-muted-foreground">Pending Payments</p>
             </div>
           </div>
         </div>
@@ -122,8 +158,8 @@ const PaymentSection = () => {
               <CheckCircle2 className="text-green-600" size={24} />
             </div>
             <div>
-              <p className="text-2xl font-bold">$13,500</p>
-              <p className="text-sm text-muted-foreground">Total Paid (YTD)</p>
+              <p className="text-2xl font-bold">${totalPaid.toLocaleString()}</p>
+              <p className="text-sm text-muted-foreground">Total Paid (All Time)</p>
             </div>
           </div>
         </div>
@@ -132,48 +168,66 @@ const PaymentSection = () => {
       {/* Outstanding Payments */}
       <div className="bg-card rounded-xl border border-border p-6">
         <h2 className="text-xl font-display font-bold mb-4">Outstanding Payments</h2>
-        
-        {outstandingPayments.length > 0 ? (
+
+        {loading ? (
+          <div className="flex items-center justify-center py-12">
+            <Loader size="md" text="Loading Payments..." />
+          </div>
+        ) : awaitingPayments.length > 0 ? (
           <div className="space-y-4">
-            {outstandingPayments.map((invoice) => (
-              <div
-                key={invoice.id}
-                className={`border rounded-lg p-4 ${
-                  invoice.status === "overdue" 
-                    ? "border-red-500/50 bg-red-500/5" 
-                    : "border-border"
-                }`}
-              >
-                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-                  <div>
-                    <div className="flex items-center gap-2 mb-1">
-                      <span className="font-mono font-semibold">{invoice.id}</span>
-                      <Badge 
-                        className={
-                          invoice.status === "overdue" 
-                            ? "bg-red-500/20 text-red-600 border-0" 
-                            : "bg-yellow-500/20 text-yellow-600 border-0"
-                        }
-                      >
-                        {invoice.status === "overdue" ? "Overdue" : "Pending"}
-                      </Badge>
+            {awaitingPayments.map((booking) => {
+              const bookingAmount = parseFloat(booking.agreed_price || 0);
+              const platformFee = bookingAmount * 0.15;
+              const totalAmount = bookingAmount + platformFee;
+
+              return (
+                <div
+                  key={booking.id}
+                  className="border rounded-lg p-4 hover:bg-muted/30 transition-colors"
+                >
+                  <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Package size={18} className="text-primary" />
+                        <span className="font-mono font-semibold text-sm">
+                          {booking.id.substring(0, 8)}...
+                        </span>
+                        <Badge className="bg-yellow-500/20 text-yellow-600 border-0">
+                          Awaiting Payment
+                        </Badge>
+                      </div>
+                      <p className="font-medium text-lg">{booking.cargo_type}</p>
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground mt-1">
+                        <MapPin size={14} />
+                        <span>{booking.pickup_city}, {booking.pickup_state}</span>
+                        <span>→</span>
+                        <span>{booking.delivery_city}, {booking.delivery_state}</span>
+                      </div>
+                      <div className="mt-3 space-y-1 text-sm">
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Booking Amount:</span>
+                          <span className="font-semibold">${bookingAmount.toLocaleString()}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-muted-foreground">Platform Fee (15%):</span>
+                          <span className="font-semibold">${platformFee.toFixed(2)}</span>
+                        </div>
+                        <div className="flex justify-between pt-2 border-t">
+                          <span className="font-bold">Total Amount:</span>
+                          <span className="font-bold text-lg text-primary">${totalAmount.toFixed(2)}</span>
+                        </div>
+                      </div>
                     </div>
-                    <p className="font-medium">{invoice.description}</p>
-                    <p className="text-sm text-muted-foreground">
-                      Booking: {invoice.bookingId} • Due: {invoice.dueDate}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-4">
-                    <div className="text-right">
-                      <p className="text-2xl font-bold">${invoice.amount.toLocaleString()}</p>
+                    <div className="flex items-center gap-4">
+                      <Button onClick={() => openPaymentDialog(booking)} size="lg">
+                        <Banknote size={18} className="mr-2" />
+                        Pay Now
+                      </Button>
                     </div>
-                    <Button onClick={() => openPaymentDialog(invoice)}>
-                      Pay Now
-                    </Button>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         ) : (
           <div className="text-center py-8 text-muted-foreground">
@@ -186,131 +240,141 @@ const PaymentSection = () => {
       {/* Payment History */}
       <div className="bg-card rounded-xl border border-border p-6">
         <h2 className="text-xl font-display font-bold mb-4">Payment History</h2>
-        
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead className="bg-muted/50">
-              <tr>
-                <th className="px-4 py-3 text-left text-sm font-semibold">Invoice</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold">Description</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold">Date</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold">Method</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold">Amount</th>
-                <th className="px-4 py-3 text-left text-sm font-semibold">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-border">
-              {paymentHistory.map((payment) => (
-                <tr key={payment.id} className="hover:bg-muted/30 transition-colors">
-                  <td className="px-4 py-3">
-                    <span className="font-mono text-sm">{payment.id}</span>
-                  </td>
-                  <td className="px-4 py-3">
-                    <p className="font-medium">{payment.description}</p>
-                    <p className="text-sm text-muted-foreground">Booking: {payment.bookingId}</p>
-                  </td>
-                  <td className="px-4 py-3 text-sm">{payment.date}</td>
-                  <td className="px-4 py-3 text-sm">{payment.method}</td>
-                  <td className="px-4 py-3 font-semibold">${payment.amount.toLocaleString()}</td>
-                  <td className="px-4 py-3">
-                    <Button variant="ghost" size="sm">
-                      <Download size={16} className="mr-1" />
-                      Receipt
-                    </Button>
-                  </td>
+
+        {loadingHistory ? (
+          <div className="flex items-center justify-center py-12">
+            <Loader size="md" text="Loading History..." />
+          </div>
+        ) : paymentHistory.length > 0 ? (
+          <div className="overflow-x-auto">
+            <table className="w-full">
+              <thead className="bg-muted/50">
+                <tr>
+                  <th className="px-4 py-3 text-left text-sm font-semibold">Transaction ID</th>
+                  <th className="px-4 py-3 text-left text-sm font-semibold">Description</th>
+                  <th className="px-4 py-3 text-left text-sm font-semibold">Date</th>
+                  <th className="px-4 py-3 text-left text-sm font-semibold">Method</th>
+                  <th className="px-4 py-3 text-left text-sm font-semibold">Amount</th>
+                  <th className="px-4 py-3 text-left text-sm font-semibold">Status</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
+              </thead>
+              <tbody className="divide-y divide-border">
+                {paymentHistory.map((payment) => (
+                  <tr key={payment.id} className="hover:bg-muted/30 transition-colors">
+                    <td className="px-4 py-3">
+                      <span className="font-mono text-sm">{payment.transaction_ref || payment.id.substring(0, 12)}</span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <p className="font-medium">{payment.cargo_type || "Booking Payment"}</p>
+                      {payment.pickup_city && (
+                        <p className="text-sm text-muted-foreground">
+                          {payment.pickup_city} → {payment.delivery_city}
+                        </p>
+                      )}
+                    </td>
+                    <td className="px-4 py-3 text-sm">
+                      {new Date(payment.created_at).toLocaleDateString()}
+                    </td>
+                    <td className="px-4 py-3 text-sm capitalize">{payment.method}</td>
+                    <td className="px-4 py-3 font-semibold">${parseFloat(payment.total_amount).toLocaleString()}</td>
+                    <td className="px-4 py-3">
+                      <Badge className={
+                        payment.status === 'completed'
+                          ? 'bg-green-500/20 text-green-600 border-0'
+                          : payment.status === 'failed'
+                            ? 'bg-red-500/20 text-red-600 border-0'
+                            : 'bg-yellow-500/20 text-yellow-600 border-0'
+                      }>
+                        {payment.status}
+                      </Badge>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        ) : (
+          <div className="text-center py-8 text-muted-foreground">
+            <p>No payment history yet</p>
+          </div>
+        )}
       </div>
 
       {/* Payment Dialog */}
       <Dialog open={paymentDialogOpen} onOpenChange={setPaymentDialogOpen}>
         <DialogContent className="max-w-md">
           <DialogHeader>
-            <DialogTitle>Pay Invoice {selectedInvoice?.id}</DialogTitle>
+            <DialogTitle>Complete Payment</DialogTitle>
             <DialogDescription>
-              {selectedInvoice?.description}
+              {selectedBooking?.cargo_type} - {selectedBooking?.pickup_city} to {selectedBooking?.delivery_city}
             </DialogDescription>
           </DialogHeader>
-          
-          <div className="space-y-6">
-            <div className="bg-muted/50 p-4 rounded-lg text-center">
-              <p className="text-sm text-muted-foreground">Amount Due</p>
-              <p className="text-3xl font-bold">${selectedInvoice?.amount.toLocaleString()}</p>
-            </div>
 
-            <div className="space-y-3">
-              <Label>Payment Method</Label>
-              <RadioGroup value={paymentMethod} onValueChange={setPaymentMethod}>
-                <div className="flex items-center space-x-2 border border-border rounded-lg p-3 cursor-pointer hover:bg-muted/50">
-                  <RadioGroupItem value="card" id="card" />
-                  <Label htmlFor="card" className="flex items-center gap-2 cursor-pointer flex-1">
-                    <CreditCard size={20} />
-                    Credit / Debit Card
-                  </Label>
+          {selectedBooking && (
+            <div className="space-y-6">
+              <div className="bg-muted/50 p-4 rounded-lg space-y-2">
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Booking Amount:</span>
+                  <span className="font-semibold">${parseFloat(selectedBooking.agreed_price).toLocaleString()}</span>
                 </div>
-                <div className="flex items-center space-x-2 border border-border rounded-lg p-3 cursor-pointer hover:bg-muted/50">
-                  <RadioGroupItem value="bank" id="bank" />
-                  <Label htmlFor="bank" className="flex items-center gap-2 cursor-pointer flex-1">
-                    <Building2 size={20} />
-                    Bank Transfer
-                  </Label>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Platform Fee (15%):</span>
+                  <span className="font-semibold">${(parseFloat(selectedBooking.agreed_price) * 0.15).toFixed(2)}</span>
                 </div>
-                <div className="flex items-center space-x-2 border border-border rounded-lg p-3 cursor-pointer hover:bg-muted/50">
-                  <RadioGroupItem value="zelle" id="zelle" />
-                  <Label htmlFor="zelle" className="flex items-center gap-2 cursor-pointer flex-1">
-                    <DollarSign size={20} />
-                    Zelle / Cash App
-                  </Label>
+                <div className="flex justify-between pt-2 border-t border-border">
+                  <span className="font-bold">Total Amount:</span>
+                  <span className="text-2xl font-bold text-primary">
+                    ${(parseFloat(selectedBooking.agreed_price) * 1.15).toFixed(2)}
+                  </span>
                 </div>
-              </RadioGroup>
-            </div>
+              </div>
 
-            {paymentMethod === "card" && (
-              <div className="space-y-4">
-                <div>
-                  <Label>Card Number</Label>
-                  <Input placeholder="4242 4242 4242 4242" />
-                </div>
-                <div className="grid grid-cols-2 gap-4">
-                  <div>
-                    <Label>Expiry</Label>
-                    <Input placeholder="MM/YY" />
+              <div className="space-y-3">
+                <Label>Payment Method</Label>
+                <RadioGroup value={paymentMethod} onValueChange={setPaymentMethod}>
+                  <div className="flex items-center space-x-2 border border-border rounded-lg p-3 cursor-pointer hover:bg-muted/50">
+                    <RadioGroupItem value="stripe" id="stripe" />
+                    <Label htmlFor="stripe" className="flex items-center gap-2 cursor-pointer flex-1">
+                      <CreditCard size={20} />
+                      <div>
+                        <p className="font-semibold">Stripe</p>
+                        <p className="text-xs text-muted-foreground">Credit / Debit Card via Stripe</p>
+                      </div>
+                    </Label>
                   </div>
-                  <div>
-                    <Label>CVC</Label>
-                    <Input placeholder="123" />
+                  <div className="flex items-center space-x-2 border border-border rounded-lg p-3 cursor-pointer hover:bg-muted/50">
+                    <RadioGroupItem value="paypal" id="paypal" />
+                    <Label htmlFor="paypal" className="flex items-center gap-2 cursor-pointer flex-1">
+                      <DollarSign size={20} />
+                      <div>
+                        <p className="font-semibold">PayPal</p>
+                        <p className="text-xs text-muted-foreground">Pay with your PayPal account</p>
+                      </div>
+                    </Label>
                   </div>
-                </div>
+                </RadioGroup>
               </div>
-            )}
 
-            {paymentMethod === "bank" && (
-              <div className="bg-muted/50 p-4 rounded-lg text-sm">
-                <p className="font-semibold mb-2">Bank Transfer Details:</p>
-                <p>Bank: First National Bank</p>
-                <p>Account: HighnHeavy LLC</p>
-                <p>Routing: 123456789</p>
-                <p>Account #: 987654321</p>
-                <p className="mt-2 text-muted-foreground">Include invoice number in memo</p>
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm text-blue-800">
+                <p className="font-semibold mb-1">🔒 Secure Payment</p>
+                <p className="text-xs">
+                  Your payment information is encrypted and secure. This is a placeholder for {paymentMethod === 'stripe' ? 'Stripe' : 'PayPal'} integration.
+                </p>
               </div>
-            )}
 
-            {paymentMethod === "zelle" && (
-              <div className="bg-muted/50 p-4 rounded-lg text-sm">
-                <p className="font-semibold mb-2">Send payment to:</p>
-                <p>Zelle: payments@highnheavy.com</p>
-                <p>Cash App: $HighnHeavy</p>
-                <p className="mt-2 text-muted-foreground">Include invoice number in note</p>
-              </div>
-            )}
-
-            <Button className="w-full" onClick={processPayment}>
-              {paymentMethod === "card" ? "Pay Now" : "Confirm Payment Sent"}
-            </Button>
-          </div>
+              <Button
+                className="w-full"
+                onClick={processPayment}
+                disabled={processing}
+              >
+                {processing ? (
+                  <Loader size="sm" text="Processing Payment..." />
+                ) : (
+                  `Pay $${(parseFloat(selectedBooking.agreed_price) * 1.15).toFixed(2)}`
+                )}
+              </Button>
+            </div>
+          )}
         </DialogContent>
       </Dialog>
     </div>

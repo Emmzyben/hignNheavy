@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
-import { Send, Loader2 } from "lucide-react";
+import { Send } from "lucide-react";
+import Loader from "@/components/ui/Loader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -86,8 +87,7 @@ const SupportChat = () => {
     if (loading && !conversationId) {
         return (
             <div className="flex flex-col items-center justify-center h-full min-h-[300px]">
-                <Loader2 className="w-8 h-8 animate-spin text-primary mb-4" />
-                <p className="text-muted-foreground">Connecting to support...</p>
+                <Loader size="md" text="Connecting to support..." />
             </div>
         );
     }

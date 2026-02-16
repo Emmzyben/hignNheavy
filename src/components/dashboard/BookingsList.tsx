@@ -19,6 +19,7 @@ import {
   Camera,
   FileCheck,
 } from "lucide-react";
+import Loader from "@/components/ui/Loader";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -58,6 +59,7 @@ interface BookingsListProps {
 const statusConfig: Record<string, { label: string; color: string; icon: any }> = {
   "pending_quote": { label: "Pending Quote", color: "bg-yellow-500/20 text-yellow-600", icon: Clock },
   "quoted": { label: "Quoted", color: "bg-blue-500/20 text-blue-600", icon: Clock },
+  "awaiting_payment": { label: "Awaiting Payment", color: "bg-orange-500/20 text-orange-600", icon: DollarSign },
   "booked": { label: "Booked", color: "bg-primary/20 text-primary", icon: Package },
   "in_transit": { label: "In Transit", color: "bg-indigo-500/20 text-indigo-600", icon: Truck },
   "delivered": { label: "Delivered", color: "bg-green-500/20 text-green-600", icon: CheckCircle2 },
@@ -79,6 +81,7 @@ const BookingsList = ({ onTrack, onMessage, onReview }: BookingsListProps) => {
   const [acceptingQuoteId, setAcceptingQuoteId] = useState<string | null>(null);
   const [viewProviderId, setViewProviderId] = useState<string | null>(null);
   const [profileDialogOpen, setProfileDialogOpen] = useState(false);
+  const [completingId, setCompletingId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchBookings();
@@ -126,6 +129,22 @@ const BookingsList = ({ onTrack, onMessage, onReview }: BookingsListProps) => {
       toast.error(error.response?.data?.message || "Failed to accept quote");
     } finally {
       setAcceptingQuoteId(null);
+    }
+  };
+
+  const handleCompleteBooking = async (bookingId: string) => {
+    setCompletingId(bookingId);
+    try {
+      const response = await api.patch(`/bookings/${bookingId}/status`, { status: 'completed' });
+      if (response.data.success) {
+        toast.success("Booking completed successfully!");
+        setDetailsOpen(false);
+        fetchBookings();
+      }
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || "Failed to complete booking");
+    } finally {
+      setCompletingId(null);
     }
   };
 
@@ -192,9 +211,8 @@ const BookingsList = ({ onTrack, onMessage, onReview }: BookingsListProps) => {
 
   if (loading) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[400px] space-y-4">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
-        <p className="text-muted-foreground font-medium">Loading your bookings...</p>
+      <div className="flex flex-col items-center justify-center min-h-[400px]">
+        <Loader size="lg" text="Syncing Bookings..." />
       </div>
     );
   }
@@ -357,6 +375,26 @@ const BookingsList = ({ onTrack, onMessage, onReview }: BookingsListProps) => {
                                 <DropdownMenuItem onClick={() => onTrack(booking.id)}>
                                   <MapPin size={16} className="mr-2" />
                                   Track Shipment
+                                </DropdownMenuItem>
+                              )}
+
+                              {booking.status === "awaiting_payment" && (
+                                <DropdownMenuItem
+                                  onClick={() => window.location.href = '/dashboard/shipper?section=payments'}
+                                  className="text-primary font-semibold focus:text-primary"
+                                >
+                                  <DollarSign size={16} className="mr-2" />
+                                  Pay Now
+                                </DropdownMenuItem>
+                              )}
+
+                              {user?.role === "shipper" && booking.status === "delivered" && (
+                                <DropdownMenuItem
+                                  onClick={() => handleCompleteBooking(booking.id)}
+                                  className="text-green-600 font-bold focus:text-green-600"
+                                >
+                                  <CheckCircle2 size={16} className="mr-2" />
+                                  Mark as Completed
                                 </DropdownMenuItem>
                               )}
 
@@ -619,6 +657,20 @@ const BookingsList = ({ onTrack, onMessage, onReview }: BookingsListProps) => {
                         <Button onClick={() => onTrack(selectedBooking.id)} className="w-full h-12 font-bold rounded-xl shadow-md">
                           <MapPin size={20} className="mr-2" />
                           Live Tracking
+                        </Button>
+                      )}
+
+                      {user?.role === "shipper" && selectedBooking.status === "delivered" && (
+                        <Button
+                          onClick={() => handleCompleteBooking(selectedBooking.id)}
+                          className="w-full h-12 font-bold rounded-xl shadow-md bg-green-600 hover:bg-green-700"
+                          disabled={completingId === selectedBooking.id}
+                        >
+                          {completingId === selectedBooking.id ? (
+                            <><Loader2 size={20} className="mr-2 animate-spin" /> Finalizing...</>
+                          ) : (
+                            <><CheckCircle2 size={20} className="mr-2" /> Mark as Completed</>
+                          )}
                         </Button>
                       )}
 

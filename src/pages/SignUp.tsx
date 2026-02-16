@@ -13,6 +13,8 @@ import { toast } from "sonner";
 import heroImage from "@/assets/hero.svg";
 import { motion, AnimatePresence } from "framer-motion";
 import { CheckCircle2, Eye, EyeOff } from "lucide-react";
+import { texasCities } from "@/lib/texasCities";
+import Loader from "@/components/ui/Loader";
 
 const SignUp = () => {
     const [searchParams] = useSearchParams();
@@ -39,7 +41,7 @@ const SignUp = () => {
         contact_number: "",
         address: "",
         city: "",
-        state: "",
+        state: "Texas",
         zip_code: "",
         mc_number: "",
         dot_number: "",
@@ -282,7 +284,7 @@ const SignUp = () => {
                 </div>
 
                 <Button type="submit" size="lg" className="w-full" disabled={!agreeToTerms || loading}>
-                    {loading ? "Creating Account..." : "Next Step"}
+                    {loading ? <Loader size="sm" text="Creating Account..." /> : "Next Step"}
                 </Button>
             </form>
         </motion.div>
@@ -334,20 +336,28 @@ const SignUp = () => {
 
                 <div className="grid grid-cols-3 gap-4">
                     <div className="space-y-2">
-                        <Label>City</Label>
+                        <Label>State</Label>
                         <Input
-                            value={profileData.city}
-                            onChange={(e) => updateProfileField('city', e.target.value)}
-                            required
+                            value="Texas"
+                            readOnly
+                            className="bg-muted cursor-not-allowed"
                         />
                     </div>
                     <div className="space-y-2">
-                        <Label>State</Label>
-                        <Input
-                            value={profileData.state}
-                            onChange={(e) => updateProfileField('state', e.target.value)}
+                        <Label>City</Label>
+                        <select
+                            value={profileData.city}
+                            onChange={(e) => updateProfileField('city', e.target.value)}
                             required
-                        />
+                            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                            <option value="">Select City</option>
+                            {texasCities.map((city) => (
+                                <option key={city} value={city}>
+                                    {city}
+                                </option>
+                            ))}
+                        </select>
                     </div>
                     <div className="space-y-2">
                         <Label>Zip Code</Label>
@@ -443,7 +453,7 @@ const SignUp = () => {
                 )}
 
                 <Button type="submit" size="lg" className="w-full" disabled={loading}>
-                    {loading ? "Saving Profile..." : "Complete Setup"}
+                    {loading ? <Loader size="sm" text="Saving Profile..." /> : "Complete Setup"}
                 </Button>
             </form>
         </motion.div>

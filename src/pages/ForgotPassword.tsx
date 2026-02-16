@@ -8,6 +8,7 @@ import { useState } from "react";
 import heroImage from "@/assets/hero.svg";
 import { toast } from "sonner";
 import api from "@/lib/api";
+import Loader from "@/components/ui/Loader";
 
 const ForgotPassword = () => {
     const [email, setEmail] = useState("");
@@ -72,10 +73,7 @@ const ForgotPassword = () => {
 
                                 <Button type="submit" size="lg" className="w-full" disabled={isLoading}>
                                     {isLoading ? (
-                                        <div className="flex items-center gap-2">
-                                            <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-t-transparent" />
-                                            <span>Sending...</span>
-                                        </div>
+                                        <Loader size="sm" text="Sending..." />
                                     ) : (
                                         "Send Reset Link"
                                     )}

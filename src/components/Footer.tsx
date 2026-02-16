@@ -56,21 +56,13 @@ const Footer = () => {
           <div>
             <h4 className="font-display font-bold text-lg mb-4">Support</h4>
             <ul className="space-y-2">
+
               <li>
-                <a href="#" className="text-gray-300 hover:text-primary transition-colors">
-                  FAQ
-                </a>
-              </li>
-              <li>
-                <a href="#" className="text-gray-300 hover:text-primary transition-colors">
+                <Link to="/signIn" className="text-gray-300 hover:text-primary transition-colors">
                   Shipper Login
-                </a>
+                </Link>
               </li>
-              <li>
-                <a href="#" className="text-gray-300 hover:text-primary transition-colors">
-                  Provider Login
-                </a>
-              </li>
+
               <li>
                 <a href="#" className="text-gray-300 hover:text-primary transition-colors">
                   Download Driver App

@@ -28,6 +28,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import api from "@/lib/api";
 import ProviderProfileDialog from "./ProviderProfileDialog";
+import Loader from "@/components/ui/Loader";
 
 interface ManageEscortsProps {
   onMessage?: (participantId: string, bookingId?: string | null) => void;
@@ -94,7 +95,7 @@ const ManageEscorts = ({ onMessage }: ManageEscortsProps) => {
 
       {loading ? (
         <div className="flex justify-center py-12">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <Loader size="lg" text="Fetching escorts..." />
         </div>
       ) : (
         <>

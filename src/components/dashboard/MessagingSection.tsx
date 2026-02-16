@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
-import { Send, Search, User as UserIcon, Loader2, MessageSquare } from "lucide-react";
+import { Send, Search, User as UserIcon, MessageSquare } from "lucide-react";
+import Loader from "@/components/ui/Loader";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
@@ -148,8 +149,7 @@ const MessagingSection = ({ initialContext, initialConversationId }: MessagingSe
   if (loading && conversations.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center h-[calc(100vh-220px)] bg-card rounded-xl border">
-        <Loader2 className="w-8 h-8 animate-spin text-primary mb-4" />
-        <p className="text-muted-foreground">Loading your messages...</p>
+        <Loader size="md" text="Loading your messages..." />
       </div>
     );
   }
@@ -274,7 +274,7 @@ const MessagingSection = ({ initialContext, initialConversationId }: MessagingSe
                 <div className="space-y-4">
                   {loadingMessages ? (
                     <div className="flex justify-center p-8">
-                      <Loader2 className="animate-spin text-muted-foreground" />
+                      <Loader size="sm" text="Syncing..." />
                     </div>
                   ) : messages.length === 0 ? (
                     <div className="text-center py-20 text-muted-foreground">

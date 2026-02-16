@@ -12,6 +12,7 @@ import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import ProfileImageUploader from "@/components/ProfileImageUploader";
+import Loader from "@/components/ui/Loader";
 
 const Profile = () => {
     const { user, refreshUser } = useAuth();
@@ -135,7 +136,7 @@ const Profile = () => {
         return (
             <DashboardLayout>
                 <div className="flex-1 flex items-center justify-center min-h-[400px]">
-                    <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div>
+                    <Loader size="lg" text="Loading profile..." />
                 </div>
             </DashboardLayout>
         );

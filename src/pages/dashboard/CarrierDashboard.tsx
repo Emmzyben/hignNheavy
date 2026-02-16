@@ -4,13 +4,13 @@ import AvailableBookings from '@/components/dashboard/carrier/AvailableBookings'
 import DriversManagement from '@/components/dashboard/carrier/DriversManagement';
 import EquipmentManagement from '@/components/dashboard/carrier/EquipmentManagement';
 
-import CarrierPayouts from '@/components/dashboard/carrier/CarrierPayouts';
+
 import CarrierWallet from '@/components/dashboard/carrier/CarrierWallet';
 import MessagingSection from '@/components/dashboard/MessagingSection';
 import ProviderReviews from '@/components/dashboard/ProviderReviews';
 import DashboardLayout from '@/components/dashboard/DashboardLayout';
 
-type TabType = 'bookings' | 'drivers' | 'equipment' | 'payouts' | 'wallet' | 'messages' | 'reviews';
+type TabType = 'bookings' | 'drivers' | 'equipment' | 'wallet' | 'messages' | 'reviews';
 
 const CarrierDashboard = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -46,8 +46,7 @@ const CarrierDashboard = () => {
       case 'equipment':
         return <EquipmentManagement />;
 
-      case 'payouts':
-        return <CarrierPayouts />;
+
       case 'wallet':
         return <CarrierWallet />;
       case 'messages':

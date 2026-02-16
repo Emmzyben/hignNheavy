@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import { MapPin, Calendar, Package, DollarSign, User, Send, FileText, Loader2, CheckCircle2, Clock, MessageSquare, Camera, Pencil, Eye, FileCheck } from 'lucide-react';
+import { MapPin, Calendar, Package, DollarSign, User, Send, FileText, Loader2, CheckCircle2, Clock, MessageSquare, Camera, Pencil, Eye, FileCheck, ExternalLink } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -11,7 +12,7 @@ import { Textarea } from '@/components/ui/textarea';
 import { toast } from 'sonner';
 import api from '@/lib/api';
 import ProviderProfileDialog from '../admin/ProviderProfileDialog';
-import { ExternalLink } from 'lucide-react';
+import Loader from '@/components/ui/Loader';
 
 type BookingTab = 'available' | 'my-quotes' | 'won-jobs';
 
@@ -20,6 +21,7 @@ interface AvailableBookingsProps {
 }
 
 const AvailableBookings = ({ onMessage }: AvailableBookingsProps) => {
+  const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<BookingTab>('available');
   const [bookings, setBookings] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -134,8 +136,7 @@ const AvailableBookings = ({ onMessage }: AvailableBookingsProps) => {
   };
 
   const openDetailsDialog = (booking: any) => {
-    setSelectedBooking(booking);
-    setDetailsDialogOpen(true);
+    navigate(`/dashboard/carrier/shipment/${booking.id}`);
   };
 
   const handleOpenShipperProfile = (shipperId: string) => {
@@ -194,8 +195,7 @@ const AvailableBookings = ({ onMessage }: AvailableBookingsProps) => {
       <div className="space-y-4">
         {loading ? (
           <div className="flex flex-col items-center justify-center py-12">
-            <Loader2 className="h-8 w-8 animate-spin text-primary mb-2" />
-            <p className="text-muted-foreground">Fetching records...</p>
+            <Loader size="md" text="Fetching records..." />
           </div>
         ) : bookings.length === 0 ? (
           <Card>
@@ -283,21 +283,7 @@ const AvailableBookings = ({ onMessage }: AvailableBookingsProps) => {
                           <p className="text-xl font-bold text-green-600">${Number(booking.agreed_price).toLocaleString()}</p>
                         </div>
                         <div className="flex flex-col gap-2">
-                          <Select
-                            value={booking.status}
-                            onValueChange={(val) => handleUpdateBookingStatus(booking.id, val)}
-                          >
-                            <SelectTrigger className="w-[140px] h-8 text-xs">
-                              <SelectValue placeholder="Update Status" />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="booked">Booked</SelectItem>
-                              <SelectItem value="in_transit">In Transit</SelectItem>
-                              <SelectItem value="delivered">Delivered</SelectItem>
-                              <SelectItem value="completed">Completed</SelectItem>
-                            </SelectContent>
-                          </Select>
-                          <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 justify-center">
+                          <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 justify-center h-8 uppercase text-[10px] font-bold tracking-widest">
                             {booking.status.replace('_', ' ')}
                           </Badge>
                           {onMessage && (
@@ -321,185 +307,7 @@ const AvailableBookings = ({ onMessage }: AvailableBookingsProps) => {
         )}
       </div>
 
-      {/* Booking Details Dialog */}
-      <Dialog open={detailsDialogOpen} onOpenChange={setDetailsDialogOpen}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Shipment Details - {selectedBooking?.id.split('-')[0]}</DialogTitle>
-          </DialogHeader>
-          {selectedBooking && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 py-4">
-              <div className="space-y-4">
-                <div>
-                  <h4 className="text-sm font-bold text-muted-foreground uppercase mb-2">Location Details</h4>
-                  <div className="space-y-3">
-                    <div className="flex gap-2">
-                      <MapPin className="h-4 w-4 text-primary shrink-0 mt-1" />
-                      <div>
-                        <p className="text-xs text-muted-foreground">Pickup Address</p>
-                        <p className="text-sm font-medium">{selectedBooking.pickup_address}</p>
-                        <p className="text-sm text-muted-foreground">{selectedBooking.pickup_city}, {selectedBooking.pickup_state} {selectedBooking.pickup_zip}</p>
-                      </div>
-                    </div>
-                    <div className="flex gap-2">
-                      <MapPin className="h-4 w-4 text-green-600 shrink-0 mt-1" />
-                      <div>
-                        <p className="text-xs text-muted-foreground">Delivery Address</p>
-                        <p className="text-sm font-medium">{selectedBooking.delivery_address}</p>
-                        <p className="text-sm text-muted-foreground">{selectedBooking.delivery_city}, {selectedBooking.delivery_state} {selectedBooking.delivery_zip}</p>
-                      </div>
-                    </div>
-                  </div>
-                </div>
 
-                <div>
-                  <h4 className="text-sm font-bold text-muted-foreground uppercase mb-2">Schedule & Requirements</h4>
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Shipment Date:</span>
-                      <span className="font-medium">{new Date(selectedBooking.shipment_date).toLocaleDateString()}</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Escort Required:</span>
-                      <span className="font-medium">{selectedBooking.requires_escort === 1 ? 'Yes' : 'No'}</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              <div className="space-y-4">
-                <div>
-                  <h4 className="text-sm font-bold text-muted-foreground uppercase mb-2">Cargo Information</h4>
-                  <div className="space-y-2 p-3 bg-muted/30 rounded-lg border">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Type:</span>
-                      <span className="font-bold">{selectedBooking.cargo_type}</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Weight:</span>
-                      <span className="font-medium">{Number(selectedBooking.weight_lbs).toLocaleString()} lbs</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-muted-foreground">Dimensions:</span>
-                      <span className="font-medium">{selectedBooking.dimensions_length_ft}L x {selectedBooking.dimensions_width_ft}W x {selectedBooking.dimensions_height_ft}H ft</span>
-                    </div>
-                  </div>
-                </div>
-
-                <div>
-                  <h4 className="text-sm font-bold text-muted-foreground uppercase mb-2">Special Instructions</h4>
-                  <p className="text-sm p-3 bg-yellow-50/50 rounded-lg border border-yellow-100 text-muted-foreground italic">
-                    {selectedBooking.special_instructions || 'No special instructions provided by shipper.'}
-                  </p>
-                </div>
-
-                <div>
-                  <h4 className="text-sm font-bold text-muted-foreground uppercase mb-2">Shipper Contacts</h4>
-                  <button
-                    onClick={() => handleOpenShipperProfile(selectedBooking.shipper_id)}
-                    className="flex items-center gap-2 group transition-colors"
-                  >
-                    <div className="p-1.5 bg-primary/10 rounded-full group-hover:bg-primary/20">
-                      <User className="h-4 w-4 text-primary" />
-                    </div>
-                    <span className="text-sm font-medium group-hover:text-primary group-hover:underline">{selectedBooking.shipper_name}</span>
-                    <ExternalLink size={14} className="text-muted-foreground group-hover:text-primary" />
-                  </button>
-                </div>
-              </div>
-
-              {(selectedBooking.status === 'delivered' || selectedBooking.status === 'completed') && (
-                <div className="mt-6 border-t pt-6 space-y-6">
-                  <div className="flex items-center gap-2 mb-2">
-                    <div className="p-2 bg-green-100 rounded-lg">
-                      <FileCheck className="text-green-600" size={20} />
-                    </div>
-                    <h4 className="font-bold text-lg">Delivery Proof</h4>
-                  </div>
-
-                  {selectedBooking.delivery_photos && (
-                    <div className="space-y-3">
-                      <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
-                        <Camera size={14} /> Delivery Photos
-                      </p>
-                      <div className="grid grid-cols-3 gap-2">
-                        {(() => {
-                          try {
-                            const photos = typeof selectedBooking.delivery_photos === 'string'
-                              ? JSON.parse(selectedBooking.delivery_photos)
-                              : selectedBooking.delivery_photos;
-
-                            return Array.isArray(photos) && photos.map((photo: string, idx: number) => (
-                              <div key={idx} className="aspect-video rounded-lg overflow-hidden bg-muted group relative border">
-                                <img
-                                  src={photo}
-                                  alt={`Delivery ${idx + 1}`}
-                                  className="w-full h-full object-cover transition-transform group-hover:scale-110"
-                                />
-                                <a
-                                  href={photo}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                  className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity"
-                                >
-                                  <Eye className="text-white" size={20} />
-                                </a>
-                              </div>
-                            ));
-                          } catch (e) {
-                            return <p className="text-sm text-muted-foreground">Error loading photos</p>;
-                          }
-                        })()}
-                      </div>
-                    </div>
-                  )}
-
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="bg-muted/30 p-3 rounded-lg border">
-                      <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1">Receiver Name</p>
-                      <p className="font-bold text-sm">{selectedBooking.receiver_name || 'Not provided'}</p>
-                    </div>
-                    <div className="bg-muted/30 p-3 rounded-lg border">
-                      <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-1">Delivered On</p>
-                      <p className="font-bold text-sm">
-                        {selectedBooking.updated_at
-                          ? new Date(selectedBooking.updated_at).toLocaleString()
-                          : 'TBD'}
-                      </p>
-                    </div>
-                  </div>
-
-                  {selectedBooking.delivery_signature && (
-                    <div className="space-y-3">
-                      <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground flex items-center gap-2">
-                        <Pencil size={14} /> Digital Signature
-                      </p>
-                      <div className="bg-white rounded-lg border p-3 flex items-center justify-center">
-                        <img
-                          src={selectedBooking.delivery_signature}
-                          alt="Receiver Signature"
-                          className="max-h-24 object-contain"
-                        />
-                      </div>
-                    </div>
-                  )}
-                </div>
-              )}
-            </div>
-          )}
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setDetailsDialogOpen(false)}>Close</Button>
-            {activeTab === 'available' && (
-              <Button onClick={() => {
-                setDetailsDialogOpen(false);
-                openQuoteDialog(selectedBooking);
-              }}>
-                Proceed to Quote
-              </Button>
-            )}
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
 
       {/* Submit Quote Dialog */}
       <Dialog open={quoteDialogOpen} onOpenChange={(open) => {
@@ -581,7 +389,7 @@ const AvailableBookings = ({ onMessage }: AvailableBookingsProps) => {
           <DialogFooter className="gap-2 sm:gap-0">
             <Button variant="outline" onClick={() => setQuoteDialogOpen(false)} disabled={isSubmitting}>Cancel</Button>
             <Button onClick={handleSubmitQuote} disabled={isSubmitting}>
-              {isSubmitting ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Submitting...</> : <><Send className="h-4 w-4 mr-2" /> Submit Quote</>}
+              {isSubmitting ? <><Loader size="sm" text="" className="mr-2" /> Submitting...</> : <><Send className="h-4 w-4 mr-2" /> Submit Quote</>}
             </Button>
           </DialogFooter>
         </DialogContent>

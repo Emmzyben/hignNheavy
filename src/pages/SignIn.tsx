@@ -11,6 +11,7 @@ import { toast } from "sonner";
 import heroImage from "@/assets/hero.svg";
 import { motion } from "framer-motion";
 import { Eye, EyeOff } from "lucide-react";
+import Loader from "@/components/ui/Loader";
 
 const SignIn = () => {
     const [email, setEmail] = useState("");
@@ -161,7 +162,7 @@ const SignIn = () => {
                                 className="w-full hover:scale-105 transition-transform duration-200"
                                 disabled={loading}
                             >
-                                {loading ? "Signing in..." : "Sign In"}
+                                {loading ? <Loader size="sm" text="Signing in..." /> : "Sign In"}
                             </Button>
                         </form>
 

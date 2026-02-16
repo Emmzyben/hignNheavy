@@ -27,6 +27,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import api from "@/lib/api";
+import Loader from "@/components/ui/Loader";
 
 interface Shipper {
   id: string;
@@ -169,7 +170,7 @@ const ManageShippers = ({ onMessage }: ManageShippersProps) => {
 
       {loading ? (
         <div className="flex justify-center py-12">
-          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+          <Loader size="lg" text="Fetching shippers..." />
         </div>
       ) : (
         <>
@@ -357,7 +358,7 @@ const ManageShippers = ({ onMessage }: ManageShippersProps) => {
               <TabsContent value="history" className="mt-4">
                 {loadingHistory ? (
                   <div className="flex justify-center py-12">
-                    <Loader2 className="h-6 w-6 animate-spin text-primary" />
+                    <Loader size="md" text="Fetching history..." />
                   </div>
                 ) : userBookings.length === 0 ? (
                   <div className="p-8 text-center bg-muted/20 rounded-lg border border-dashed text-muted-foreground">

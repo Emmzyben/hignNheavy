@@ -24,6 +24,9 @@ import VerificationPending from "./pages/VerificationPending";
 import DriverDashboard from "./pages/dashboard/DriverDashboard";
 import DriverRequestDetail from "./pages/dashboard/DriverRequestDetail";
 import DriverCompleteDelivery from "./pages/dashboard/DriverCompleteDelivery";
+import EscortJobDetail from "./pages/dashboard/EscortJobDetail";
+import CarrierShipmentDetail from "./pages/dashboard/CarrierShipmentDetail";
+import AdminBookingDetail from "./pages/dashboard/AdminBookingDetail";
 
 import ProtectedRoute from "./components/ProtectedRoute";
 
@@ -83,10 +86,26 @@ const App = () => (
             }
           />
           <Route
+            path="/dashboard/carrier/shipment/:id"
+            element={
+              <ProtectedRoute allowedRoles={['carrier']}>
+                <CarrierShipmentDetail />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/dashboard/escort"
             element={
               <ProtectedRoute allowedRoles={['escort']}>
                 <EscortDashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/dashboard/escort/job/:id"
+            element={
+              <ProtectedRoute allowedRoles={['escort']}>
+                <EscortJobDetail />
               </ProtectedRoute>
             }
           />
@@ -119,6 +138,14 @@ const App = () => (
             element={
               <ProtectedRoute allowedRoles={['admin']}>
                 <AdminDashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/dashboard/admin/booking/:id"
+            element={
+              <ProtectedRoute allowedRoles={['admin']}>
+                <AdminBookingDetail />
               </ProtectedRoute>
             }
           />

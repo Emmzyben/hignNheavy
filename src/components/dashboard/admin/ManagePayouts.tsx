@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { Search, CheckCircle, XCircle, Eye, Filter } from "lucide-react";
+import { useState, useEffect } from "react";
+import { Search, CheckCircle, XCircle, Eye, Filter, Banknote, Clock, Building } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -16,6 +16,8 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
+  DialogFooter,
+  DialogDescription,
 } from "@/components/ui/dialog";
 import {
   Select,
@@ -24,294 +26,311 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import api from "@/lib/api";
+import { toast } from "sonner";
+import Loader from "@/components/ui/Loader";
 
-interface Payout {
-  id: string;
-  provider: string;
-  providerType: "carrier" | "escort";
-  amount: number;
-  bookingId: string;
-  status: "pending" | "approved" | "rejected" | "paid";
-  requestedAt: string;
-  processedAt?: string;
-  bankAccount: string;
-  notes?: string;
-}
-
-const mockPayouts: Payout[] = [
-  { id: "PAY-001", provider: "FastHaul Logistics", providerType: "carrier", amount: 8500, bookingId: "BK-2024-002", status: "pending", requestedAt: "2024-12-14", bankAccount: "****4521" },
-  { id: "PAY-002", provider: "SafeRoute Escorts", providerType: "escort", amount: 1200, bookingId: "BK-2024-002", status: "pending", requestedAt: "2024-12-14", bankAccount: "****7832" },
-  { id: "PAY-003", provider: "Heavy Movers Inc", providerType: "carrier", amount: 15200, bookingId: "BK-2024-003", status: "pending", requestedAt: "2024-12-13", bankAccount: "****2145" },
-  { id: "PAY-004", provider: "Highway Guard LLC", providerType: "escort", amount: 2100, bookingId: "BK-2024-003", status: "approved", requestedAt: "2024-12-12", processedAt: "2024-12-13", bankAccount: "****9087" },
-  { id: "PAY-005", provider: "BigRig Transport", providerType: "carrier", amount: 12800, bookingId: "BK-2024-005", status: "paid", requestedAt: "2024-12-05", processedAt: "2024-12-07", bankAccount: "****3456" },
-  { id: "PAY-006", provider: "LoadWatch Services", providerType: "escort", amount: 1800, bookingId: "BK-2024-005", status: "paid", requestedAt: "2024-12-05", processedAt: "2024-12-07", bankAccount: "****6789" },
-];
-
-const statusConfig: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
-  "pending": { label: "Pending", variant: "outline" },
+const statusConfig: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" | "warning" }> = {
+  "pending": { label: "Pending Review", variant: "outline" },
   "approved": { label: "Approved", variant: "secondary" },
   "rejected": { label: "Rejected", variant: "destructive" },
-  "paid": { label: "Paid", variant: "default" },
+  "processing": { label: "Processing", variant: "warning" },
+  "completed": { label: "Completed", variant: "default" },
+  "failed": { label: "Failed", variant: "destructive" },
 };
 
 const ManagePayouts = () => {
-  const [payouts, setPayouts] = useState(mockPayouts);
+  const [loading, setLoading] = useState(true);
+  const [withdrawals, setWithdrawals] = useState<any[]>([]);
+  const [wallets, setWallets] = useState<any[]>([]);
+  const [totals, setTotals] = useState({ balance: 0, pending: 0 });
   const [searchTerm, setSearchTerm] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
-  const [typeFilter, setTypeFilter] = useState<string>("all");
-  const [selectedPayout, setSelectedPayout] = useState<Payout | null>(null);
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [selectedRequest, setSelectedRequest] = useState<any | null>(null);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
+  const [processing, setProcessing] = useState(false);
 
-  const filteredPayouts = payouts.filter(p => {
-    const matchesSearch = p.provider.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      p.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      p.bookingId.toLowerCase().includes(searchTerm.toLowerCase());
-    const matchesStatus = statusFilter === "all" || p.status === statusFilter;
-    const matchesType = typeFilter === "all" || p.providerType === typeFilter;
-    return matchesSearch && matchesStatus && matchesType;
+  useEffect(() => {
+    fetchData();
+  }, []);
+
+  const fetchData = async () => {
+    setLoading(true);
+    try {
+      const [wResponse, walletResponse] = await Promise.all([
+        api.get('/wallets/admin/withdrawals'),
+        api.get('/wallets/admin/all')
+      ]);
+
+      if (wResponse.data.success) setWithdrawals(wResponse.data.data);
+      if (walletResponse.data.success) {
+        setWallets(walletResponse.data.data.wallets);
+        setTotals(walletResponse.data.data.totals);
+      }
+    } catch (error) {
+      console.error('Fetch admin wallet data error:', error);
+      toast.error('Failed to load financial data');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleAction = async (id: string, action: 'approve' | 'reject') => {
+    if (action === 'reject' && !rejectReason) {
+      toast.error('Please provide a reason for rejection');
+      return;
+    }
+
+    setProcessing(true);
+    try {
+      const response = await api.post(`/wallets/admin/withdrawals/${id}/${action}`, {
+        reason: rejectReason
+      });
+
+      if (response.data.success) {
+        toast.success(`Withdrawal ${action}d successfully`);
+        setDialogOpen(false);
+        setRejectReason("");
+        fetchData();
+      }
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || `Failed to ${action} withdrawal`);
+    } finally {
+      setProcessing(false);
+    }
+  };
+
+  const filteredWithdrawals = withdrawals.filter(w => {
+    const matchesSearch = w.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      w.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      w.id.toLowerCase().includes(searchTerm.toLowerCase());
+    const matchesStatus = statusFilter === "all" || w.status === statusFilter;
+    return matchesSearch && matchesStatus;
   });
 
-  const pendingTotal = payouts.filter(p => p.status === "pending").reduce((sum, p) => sum + p.amount, 0);
-  const approvedTotal = payouts.filter(p => p.status === "approved").reduce((sum, p) => sum + p.amount, 0);
-  const paidTotal = payouts.filter(p => p.status === "paid").reduce((sum, p) => sum + p.amount, 0);
-
-  const handleView = (payout: Payout) => {
-    setSelectedPayout(payout);
-    setRejectReason("");
-    setDialogOpen(true);
-  };
-
-  const handleApprove = (payoutId: string) => {
-    setPayouts(payouts.map(p => 
-      p.id === payoutId 
-        ? { ...p, status: "approved" as const, processedAt: new Date().toISOString().split('T')[0] }
-        : p
-    ));
-    setDialogOpen(false);
-  };
-
-  const handleReject = (payoutId: string) => {
-    setPayouts(payouts.map(p => 
-      p.id === payoutId 
-        ? { ...p, status: "rejected" as const, processedAt: new Date().toISOString().split('T')[0], notes: rejectReason }
-        : p
-    ));
-    setDialogOpen(false);
-  };
-
-  const handleMarkPaid = (payoutId: string) => {
-    setPayouts(payouts.map(p => 
-      p.id === payoutId 
-        ? { ...p, status: "paid" as const, processedAt: new Date().toISOString().split('T')[0] }
-        : p
-    ));
-  };
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center p-20">
+        <Loader size="lg" text="Processing Financials..." />
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-8">
       <div>
-        <h1 className="text-2xl font-bold">Manage Payouts</h1>
-        <p className="text-muted-foreground">Review and approve payout requests from carriers and escorts</p>
+        <h1 className="text-3xl font-display font-bold">Financial Settlement Center</h1>
+        <p className="text-muted-foreground">Manage withdrawals and track system-wide platform earnings</p>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <div className="bg-card border rounded-lg p-4">
-          <p className="text-sm text-muted-foreground">Total Pending</p>
-          <p className="text-2xl font-bold text-yellow-600">${pendingTotal.toLocaleString()}</p>
-          <p className="text-sm text-muted-foreground">{payouts.filter(p => p.status === "pending").length} requests</p>
-        </div>
-        <div className="bg-card border rounded-lg p-4">
-          <p className="text-sm text-muted-foreground">Approved (Awaiting Payment)</p>
-          <p className="text-2xl font-bold text-blue-600">${approvedTotal.toLocaleString()}</p>
-          <p className="text-sm text-muted-foreground">{payouts.filter(p => p.status === "approved").length} requests</p>
-        </div>
-        <div className="bg-card border rounded-lg p-4">
-          <p className="text-sm text-muted-foreground">Paid This Month</p>
-          <p className="text-2xl font-bold text-green-600">${paidTotal.toLocaleString()}</p>
-          <p className="text-sm text-muted-foreground">{payouts.filter(p => p.status === "paid").length} payouts</p>
-        </div>
-        <div className="bg-card border rounded-lg p-4">
-          <p className="text-sm text-muted-foreground">Total Requests</p>
-          <p className="text-2xl font-bold">{payouts.length}</p>
-        </div>
+      {/* System Overview Stats */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <Card className="bg-gradient-to-br from-primary/10 to-transparent border-primary/20">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground uppercase flex items-center gap-2">
+              <Banknote size={16} /> Total System Holdings
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-3xl font-bold">${totals.balance.toLocaleString()}</p>
+            <p className="text-xs text-muted-foreground mt-1">Available across all user wallets</p>
+          </CardContent>
+        </Card>
+        <Card className="bg-gradient-to-br from-orange-500/10 to-transparent border-orange-500/20">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground uppercase flex items-center gap-2">
+              <Clock size={16} /> Pending in Transit
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-3xl font-bold">${totals.pending.toLocaleString()}</p>
+            <p className="text-xs text-muted-foreground mt-1">Locked funds for active bookings</p>
+          </CardContent>
+        </Card>
+        <Card className="bg-gradient-to-br from-green-500/10 to-transparent border-green-500/20">
+          <CardHeader className="pb-2">
+            <CardTitle className="text-sm font-medium text-muted-foreground uppercase flex items-center gap-2">
+              <CheckCircle size={16} /> Pending Requests
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <p className="text-3xl font-bold">{withdrawals.filter(w => w.status === 'pending').length}</p>
+            <p className="text-xs text-muted-foreground mt-1">Withdrawal requests awaiting approval</p>
+          </CardContent>
+        </Card>
       </div>
 
-      {/* Filters */}
-      <div className="flex flex-wrap gap-4">
-        <div className="relative flex-1 min-w-[200px] max-w-md">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-          <Input
-            placeholder="Search payouts..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className="pl-10"
-          />
-        </div>
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-[150px]">
-            <Filter className="h-4 w-4 mr-2" />
-            <SelectValue placeholder="Status" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Status</SelectItem>
-            <SelectItem value="pending">Pending</SelectItem>
-            <SelectItem value="approved">Approved</SelectItem>
-            <SelectItem value="rejected">Rejected</SelectItem>
-            <SelectItem value="paid">Paid</SelectItem>
-          </SelectContent>
-        </Select>
-        <Select value={typeFilter} onValueChange={setTypeFilter}>
-          <SelectTrigger className="w-[150px]">
-            <SelectValue placeholder="Type" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Types</SelectItem>
-            <SelectItem value="carrier">Carriers</SelectItem>
-            <SelectItem value="escort">Escorts</SelectItem>
-          </SelectContent>
-        </Select>
-      </div>
-
-      {/* Table */}
-      <div className="bg-card border rounded-lg">
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Payout ID</TableHead>
-              <TableHead>Provider</TableHead>
-              <TableHead>Type</TableHead>
-              <TableHead>Booking</TableHead>
-              <TableHead>Amount</TableHead>
-              <TableHead>Bank Account</TableHead>
-              <TableHead>Requested</TableHead>
-              <TableHead>Status</TableHead>
-              <TableHead>Actions</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {filteredPayouts.map((payout) => (
-              <TableRow key={payout.id}>
-                <TableCell className="font-mono text-sm">{payout.id}</TableCell>
-                <TableCell className="font-medium">{payout.provider}</TableCell>
-                <TableCell>
-                  <Badge variant={payout.providerType === "carrier" ? "default" : "secondary"}>
-                    {payout.providerType}
-                  </Badge>
-                </TableCell>
-                <TableCell className="font-mono text-sm">{payout.bookingId}</TableCell>
-                <TableCell className="font-bold">${payout.amount.toLocaleString()}</TableCell>
-                <TableCell>{payout.bankAccount}</TableCell>
-                <TableCell>{payout.requestedAt}</TableCell>
-                <TableCell>
-                  <Badge variant={statusConfig[payout.status]?.variant}>
-                    {statusConfig[payout.status]?.label}
-                  </Badge>
-                </TableCell>
-                <TableCell>
-                  <div className="flex gap-1">
-                    <Button variant="ghost" size="icon" onClick={() => handleView(payout)}>
-                      <Eye className="h-4 w-4" />
-                    </Button>
-                    {payout.status === "pending" && (
-                      <>
-                        <Button variant="ghost" size="icon" className="text-green-600" onClick={() => handleApprove(payout.id)}>
-                          <CheckCircle className="h-4 w-4" />
-                        </Button>
-                        <Button variant="ghost" size="icon" className="text-destructive" onClick={() => handleView(payout)}>
-                          <XCircle className="h-4 w-4" />
-                        </Button>
-                      </>
-                    )}
-                    {payout.status === "approved" && (
-                      <Button size="sm" variant="outline" onClick={() => handleMarkPaid(payout.id)}>
-                        Mark Paid
-                      </Button>
-                    )}
-                  </div>
-                </TableCell>
+      {/* Withdrawal Table */}
+      <Card>
+        <CardHeader className="flex flex-row items-center justify-between">
+          <CardTitle>Withdrawal Requests</CardTitle>
+          <div className="flex items-center gap-4">
+            <div className="relative w-64">
+              <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search by name or email"
+                className="pl-8"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+              />
+            </div>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-40">
+                <Filter className="h-4 w-4 mr-2" />
+                <SelectValue placeholder="Status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Status</SelectItem>
+                <SelectItem value="pending">Pending</SelectItem>
+                <SelectItem value="completed">Completed</SelectItem>
+                <SelectItem value="rejected">Rejected</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </CardHeader>
+        <CardContent>
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Request Date</TableHead>
+                <TableHead>User</TableHead>
+                <TableHead>Amount</TableHead>
+                <TableHead>Bank Account</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
               </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </div>
+            </TableHeader>
+            <TableBody>
+              {filteredWithdrawals.length > 0 ? (
+                filteredWithdrawals.map((w) => (
+                  <TableRow key={w.id}>
+                    <TableCell className="text-xs">
+                      {new Date(w.requested_at).toLocaleString()}
+                    </TableCell>
+                    <TableCell>
+                      <div className="font-medium">{w.full_name}</div>
+                      <div className="text-xs text-muted-foreground">{w.email}</div>
+                    </TableCell>
+                    <TableCell className="font-bold">${parseFloat(w.amount).toLocaleString()}</TableCell>
+                    <TableCell>
+                      <div className="text-xs">{w.bank_name}</div>
+                      <div className="text-xs text-muted-foreground">****{w.account_number.slice(-4)}</div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant={statusConfig[w.status]?.variant || "outline"}>
+                        {statusConfig[w.status]?.label || w.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Button variant="ghost" size="sm" onClick={() => { setSelectedRequest(w); setDialogOpen(true); }}>
+                        <Eye className="h-4 w-4 mr-2" /> Details
+                      </Button>
+                    </TableCell>
+                  </TableRow>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center py-10 text-muted-foreground">
+                    No withdrawal requests found.
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
+        </CardContent>
+      </Card>
 
-      {/* Payout Details Dialog */}
+      {/* Request Details Dialog */}
       <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-        <DialogContent>
+        <DialogContent className="max-w-lg">
           <DialogHeader>
-            <DialogTitle>Payout Details - {selectedPayout?.id}</DialogTitle>
+            <DialogTitle>Withdrawal Review</DialogTitle>
+            <DialogDescription>Review bank details and process the request.</DialogDescription>
           </DialogHeader>
-          {selectedPayout && (
-            <div className="space-y-4">
+          {selectedRequest && (
+            <div className="space-y-6 py-4">
               <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm text-muted-foreground">Provider</p>
-                  <p className="font-medium">{selectedPayout.provider}</p>
+                <div className="space-y-1">
+                  <p className="text-xs text-muted-foreground uppercase font-bold">User</p>
+                  <p className="font-medium">{selectedRequest.full_name}</p>
+                  <p className="text-xs text-muted-foreground">{selectedRequest.email}</p>
                 </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Type</p>
-                  <Badge variant={selectedPayout.providerType === "carrier" ? "default" : "secondary"}>
-                    {selectedPayout.providerType}
-                  </Badge>
+                <div className="space-y-1 text-right">
+                  <p className="text-xs text-muted-foreground uppercase font-bold">Amount</p>
+                  <p className="text-2xl font-bold text-primary">${parseFloat(selectedRequest.amount).toLocaleString()}</p>
                 </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Booking ID</p>
-                  <p className="font-mono">{selectedPayout.bookingId}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Amount</p>
-                  <p className="text-xl font-bold text-green-600">${selectedPayout.amount.toLocaleString()}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Bank Account</p>
-                  <p className="font-medium">{selectedPayout.bankAccount}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Requested</p>
-                  <p className="font-medium">{selectedPayout.requestedAt}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-muted-foreground">Status</p>
-                  <Badge variant={statusConfig[selectedPayout.status]?.variant}>
-                    {statusConfig[selectedPayout.status]?.label}
-                  </Badge>
-                </div>
-                {selectedPayout.processedAt && (
-                  <div>
-                    <p className="text-sm text-muted-foreground">Processed</p>
-                    <p className="font-medium">{selectedPayout.processedAt}</p>
-                  </div>
-                )}
               </div>
 
-              {selectedPayout.status === "pending" && (
-                <div className="border-t pt-4 space-y-4">
+              <div className="p-4 bg-muted/50 rounded-lg border border-border">
+                <p className="text-xs text-muted-foreground uppercase font-bold mb-3 flex items-center gap-2">
+                  <Building size={14} /> Bank Details
+                </p>
+                <div className="grid grid-cols-2 gap-y-3 gap-x-4 text-sm">
                   <div>
-                    <label className="text-sm font-medium">Rejection Reason (if rejecting)</label>
+                    <p className="text-xs text-muted-foreground">Bank Name</p>
+                    <p className="font-medium">{selectedRequest.bank_name}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Holder Name</p>
+                    <p className="font-medium">{selectedRequest.account_holder_name}</p>
+                  </div>
+                  <div>
+                    <p className="text-xs text-muted-foreground">Account Number</p>
+                    <p className="font-mono font-medium">{selectedRequest.account_number}</p>
+                  </div>
+                  {selectedRequest.routing_number && (
+                    <div>
+                      <p className="text-xs text-muted-foreground">Routing Number</p>
+                      <p className="font-mono font-medium">{selectedRequest.routing_number}</p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {selectedRequest.status === 'pending' ? (
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label>Rejection Reason (only if rejecting)</Label>
                     <Textarea
                       placeholder="Enter reason for rejection..."
                       value={rejectReason}
                       onChange={(e) => setRejectReason(e.target.value)}
                     />
                   </div>
-                  <div className="flex justify-end gap-2">
-                    <Button variant="destructive" onClick={() => handleReject(selectedPayout.id)} disabled={!rejectReason}>
-                      <XCircle className="h-4 w-4 mr-2" /> Reject
+                  <div className="flex gap-3">
+                    <Button
+                      variant="destructive"
+                      className="flex-1"
+                      onClick={() => handleAction(selectedRequest.id, 'reject')}
+                      disabled={processing || !rejectReason}
+                    >
+                      Reject Request
                     </Button>
-                    <Button onClick={() => handleApprove(selectedPayout.id)}>
-                      <CheckCircle className="h-4 w-4 mr-2" /> Approve to Wallet
+                    <Button
+                      className="flex-1"
+                      onClick={() => handleAction(selectedRequest.id, 'approve')}
+                      disabled={processing}
+                    >
+                      {processing ? <Loader size="sm" text="" /> : 'Approve & Release'}
                     </Button>
                   </div>
                 </div>
-              )}
-
-              {selectedPayout.notes && (
-                <div className="border-t pt-4">
-                  <p className="text-sm text-muted-foreground">Notes</p>
-                  <p className="text-sm">{selectedPayout.notes}</p>
+              ) : (
+                <div className="p-4 bg-secondary/20 rounded-lg border flex items-center justify-between">
+                  <div>
+                    <p className="text-xs text-muted-foreground">Request Status</p>
+                    <p className="font-bold capitalize">{selectedRequest.status}</p>
+                  </div>
+                  {selectedRequest.processed_at && (
+                    <div className="text-right">
+                      <p className="text-xs text-muted-foreground">Processed On</p>
+                      <p className="text-sm font-medium">{new Date(selectedRequest.processed_at).toLocaleString()}</p>
+                    </div>
+                  )}
                 </div>
               )}
             </div>

@@ -12,6 +12,7 @@ import {
     Box,
     Loader2
 } from "lucide-react";
+import Loader from "@/components/ui/Loader";
 import { toast } from "sonner";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import api from "@/lib/api";
@@ -85,7 +86,7 @@ const DriverRequestDetail = () => {
         return (
             <DashboardLayout activeSection="requests">
                 <div className="flex items-center justify-center min-h-[400px]">
-                    <Loader2 className="w-8 h-8 animate-spin text-primary" />
+                    <Loader size="lg" text="Processing Request..." />
                 </div>
             </DashboardLayout>
         );

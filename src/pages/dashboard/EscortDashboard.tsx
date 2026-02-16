@@ -3,13 +3,13 @@ import { useSearchParams } from "react-router-dom";
 import AvailableBookings from "@/components/dashboard/escort/AvailableBookings";
 import VehiclesManagement from "@/components/dashboard/escort/VehiclesManagement";
 
-import EscortPayouts from "@/components/dashboard/escort/EscortPayouts";
+
 import EscortWallet from "@/components/dashboard/escort/EscortWallet";
 import MessagingSection from "@/components/dashboard/MessagingSection";
 import ProviderReviews from "@/components/dashboard/ProviderReviews";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 
-type TabType = 'available' | 'vehicles' | 'payouts' | 'wallet' | 'messages' | 'reviews';
+type TabType = 'available' | 'vehicles' | 'wallet' | 'messages' | 'reviews';
 
 const EscortDashboard = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -43,8 +43,7 @@ const EscortDashboard = () => {
       case "vehicles":
         return <VehiclesManagement />;
 
-      case "payouts":
-        return <EscortPayouts />;
+
       case "wallet":
         return <EscortWallet />;
       case "messages":

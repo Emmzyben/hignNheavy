@@ -62,7 +62,7 @@ CREATE TABLE bookings (
     
     -- Status Tracking
     status VARCHAR(50) NOT NULL DEFAULT 'pending_quote' 
-        CHECK (status IN ('pending_quote', 'quoted', 'booked', 'in_transit', 'delivered', 'cancelled', 'completed')),
+        CHECK (status IN ('pending_quote', 'quoted', 'awaiting_payment', 'booked', 'in_transit', 'delivered', 'cancelled', 'completed')),
     
     -- Location Details
     pickup_address TEXT NOT NULL,
@@ -212,6 +212,7 @@ CREATE TABLE payouts (
 CREATE TABLE wallets (
     user_id CHAR(36) PRIMARY KEY,
     balance DECIMAL(12,2) DEFAULT 0.00,
+    pending_balance DECIMAL(12,2) DEFAULT 0.00,
     currency VARCHAR(3) DEFAULT 'USD',
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     
@@ -224,7 +225,7 @@ CREATE TABLE wallet_transactions (
     wallet_id CHAR(36) NOT NULL,
     
     amount DECIMAL(12,2) NOT NULL,
-    type VARCHAR(50) NOT NULL CHECK (type IN ('deposit', 'withdrawal', 'payment_received', 'payment_sent', 'refund', 'fee')),
+    type VARCHAR(50) NOT NULL CHECK (type IN ('deposit', 'withdrawal', 'payment_received', 'payment_sent', 'refund', 'fee', 'pending', 'booking_pending', 'booking_completed', 'withdrawal_approved')),
     
     status VARCHAR(50) DEFAULT 'completed',
     reference_id CHAR(36),
@@ -233,6 +234,50 @@ CREATE TABLE wallet_transactions (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     
     FOREIGN KEY (wallet_id) REFERENCES wallets(user_id)
+);
+
+-- 10a. BANK ACCOUNTS (For withdrawals)
+CREATE TABLE bank_accounts (
+    id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
+    user_id CHAR(36) NOT NULL,
+    account_holder_name VARCHAR(255) NOT NULL,
+    bank_name VARCHAR(255) NOT NULL,
+    account_number VARCHAR(100) NOT NULL,
+    routing_number VARCHAR(50),
+    swift_code VARCHAR(50),
+    iban VARCHAR(50),
+    account_type VARCHAR(50) DEFAULT 'checking' CHECK (account_type IN ('checking', 'savings')),
+    is_primary BOOLEAN DEFAULT TRUE,
+    is_verified BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    UNIQUE KEY unique_user_primary (user_id, is_primary)
+);
+
+-- 10b. WITHDRAWALS (Withdrawal requests)
+CREATE TABLE withdrawals (
+    id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
+    user_id CHAR(36) NOT NULL,
+    bank_account_id CHAR(36) NOT NULL,
+    amount DECIMAL(12,2) NOT NULL,
+    status VARCHAR(50) DEFAULT 'pending' CHECK (status IN ('pending', 'approved', 'rejected', 'processing', 'completed', 'failed')),
+    
+    requested_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    processed_at TIMESTAMP,
+    processed_by CHAR(36),
+    
+    admin_notes TEXT,
+    rejection_reason TEXT,
+    transaction_reference VARCHAR(100),
+    
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY (bank_account_id) REFERENCES bank_accounts(id),
+    FOREIGN KEY (processed_by) REFERENCES users(id)
 );
 
 -- 11. INVOICES
@@ -257,14 +302,24 @@ CREATE TABLE invoices (
 -- 12. PAYMENTS (Actual money movement records)
 CREATE TABLE payments (
     id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
+    booking_id CHAR(36),
     invoice_id CHAR(36),
+    payer_id CHAR(36) NOT NULL,
     amount DECIMAL(12,2) NOT NULL,
-    method VARCHAR(50) NOT NULL CHECK (method IN ('credit_card', 'bank_transfer', 'zelle', 'wallet')),
+    carrier_amount DECIMAL(12,2) DEFAULT 0.00,
+    escort_amount DECIMAL(12,2) DEFAULT 0.00,
+    platform_fee DECIMAL(12,2) DEFAULT 0.00,
+    total_amount DECIMAL(12,2) NOT NULL,
+    method VARCHAR(50) NOT NULL CHECK (method IN ('stripe', 'paypal', 'credit_card', 'bank_transfer', 'zelle', 'wallet')),
     transaction_ref VARCHAR(100),
-    status VARCHAR(50) DEFAULT 'completed',
+    status VARCHAR(50) DEFAULT 'pending' CHECK (status IN ('pending', 'completed', 'failed', 'refunded')),
+    metadata JSON,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     
-    FOREIGN KEY (invoice_id) REFERENCES invoices(id)
+    FOREIGN KEY (booking_id) REFERENCES bookings(id) ON DELETE CASCADE,
+    FOREIGN KEY (invoice_id) REFERENCES invoices(id),
+    FOREIGN KEY (payer_id) REFERENCES users(id)
 );
 
 -- 13. MESSAGING & CHATS
