@@ -151,7 +151,7 @@ const EscortJobDetail = () => {
                                         <div className="p-4 bg-muted/30 rounded-lg border space-y-3">
                                             <div className="flex justify-between items-center text-sm">
                                                 <span className="text-muted-foreground font-medium">Weight:</span>
-                                                <span className="font-bold">{Number(booking.weight_lbs).toLocaleString()} lbs</span>
+                                                <span className="font-bold">{Number(booking.weight_lbs).toLocaleString()} {booking.weight_unit || 'lbs'}</span>
                                             </div>
                                             <div className="flex justify-between items-center text-sm">
                                                 <span className="text-muted-foreground font-medium">Dimensions:</span>

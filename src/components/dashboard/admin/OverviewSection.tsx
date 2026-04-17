@@ -130,7 +130,7 @@ const OverviewSection = ({ setActiveSection }: OverviewSectionProps) => {
     return (
         <div className="space-y-8">
             {/* Stats Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
                 {stats.map((stat, index) => (
                     <motion.div
                         key={stat.label}

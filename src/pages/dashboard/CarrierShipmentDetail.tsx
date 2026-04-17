@@ -155,7 +155,7 @@ const CarrierShipmentDetail = () => {
                                             </div>
                                             <div className="flex justify-between items-center text-sm">
                                                 <span className="text-muted-foreground font-medium">Net Weight:</span>
-                                                <span className="font-bold">{Number(booking.weight_lbs).toLocaleString()} lbs</span>
+                                                <span className="font-bold">{Number(booking.weight_lbs).toLocaleString()} {booking.weight_unit || 'lbs'}</span>
                                             </div>
                                             <div className="flex justify-between items-center text-sm">
                                                 <span className="text-muted-foreground font-medium">Dimensions (LxWxH):</span>
@@ -179,21 +179,41 @@ const CarrierShipmentDetail = () => {
                                 </div>
                             </div>
 
-                            <div className="pt-8 border-t border-border">
-                                <p className="text-xs text-muted-foreground font-bold tracking-widest uppercase mb-4">Contact Information</p>
-                                <button
-                                    onClick={() => handleOpenShipperProfile(booking.shipper_id)}
-                                    className="flex items-center gap-3 p-3 rounded-xl border border-border bg-muted/20 hover:bg-muted/40 transition-colors group w-full"
-                                >
-                                    <div className="p-2 bg-primary/10 rounded-full group-hover:bg-primary/20 transition-colors">
-                                        <User className="h-5 w-5 text-primary" />
+                            <div className="pt-8 border-t border-border space-y-6">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div>
+                                        <p className="text-xs text-muted-foreground font-bold tracking-widest uppercase mb-4">Shipper Information</p>
+                                        <button
+                                            onClick={() => handleOpenShipperProfile(booking.shipper_id)}
+                                            className="flex items-center gap-3 p-3 rounded-xl border border-border bg-muted/20 hover:bg-muted/40 transition-colors group w-full"
+                                        >
+                                            <div className="p-2 bg-primary/10 rounded-full group-hover:bg-primary/20 transition-colors">
+                                                <User className="h-5 w-5 text-primary" />
+                                            </div>
+                                            <div className="text-left flex-1">
+                                                <p className="text-xs text-muted-foreground font-bold uppercase tracking-wider">Primary Shipper</p>
+                                                <p className="font-bold group-hover:text-primary transition-colors">{booking.shipper_name}</p>
+                                            </div>
+                                            <ExternalLink size={18} className="text-muted-foreground group-hover:text-primary transition-colors" />
+                                        </button>
                                     </div>
-                                    <div className="text-left flex-1">
-                                        <p className="text-xs text-muted-foreground font-bold uppercase tracking-wider">Shipper</p>
-                                        <p className="font-bold group-hover:text-primary transition-colors">{booking.shipper_name}</p>
-                                    </div>
-                                    <ExternalLink size={18} className="text-muted-foreground group-hover:text-primary transition-colors" />
-                                </button>
+
+                                    {booking.driver_name && (
+                                        <div>
+                                            <p className="text-xs text-muted-foreground font-bold tracking-widest uppercase mb-4">Assigned Personnel</p>
+                                            <div className="flex items-center gap-3 p-3 rounded-xl border border-primary/20 bg-primary/5 w-full">
+                                                <div className="p-2 bg-primary/20 rounded-full">
+                                                    <User className="h-5 w-5 text-primary" />
+                                                </div>
+                                                <div className="text-left flex-1">
+                                                    <p className="text-xs text-muted-foreground font-bold uppercase tracking-wider">Assigned Driver</p>
+                                                    <p className="font-bold text-primary">{booking.driver_name}</p>
+                                                    {booking.driver_phone && <p className="text-[10px] text-muted-foreground">{booking.driver_phone}</p>}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
                             </div>
                         </Card>
 

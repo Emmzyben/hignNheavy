@@ -44,7 +44,6 @@ const DriverProfile = () => {
     });
 
     const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
-    const [notificationsDialogOpen, setNotificationsDialogOpen] = useState(false);
     const [updatingPassword, setUpdatingPassword] = useState(false);
     const [passwordData, setPasswordData] = useState({
         current: "",
@@ -53,9 +52,7 @@ const DriverProfile = () => {
     });
     const [showPasswords, setShowPasswords] = useState({ current: false, new: false, confirm: false });
 
-    const [emailNotifications, setEmailNotifications] = useState(true);
-    const [pushNotifications, setPushNotifications] = useState(true);
-    const [updatingNotifications, setUpdatingNotifications] = useState(false);
+
 
     useEffect(() => {
         const fetchDriverStats = async () => {
@@ -69,9 +66,7 @@ const DriverProfile = () => {
                         pending: 0 // Mock for now
                     });
 
-                    // Set notification settings from user data
-                    setEmailNotifications(user?.email_notifications !== false);
-                    setPushNotifications(user?.push_notifications !== false);
+
                 }
             } catch (error) {
                 console.error("Failed to fetch driver stats", error);
@@ -112,28 +107,7 @@ const DriverProfile = () => {
         }
     };
 
-    const handleNotificationToggle = async (type: 'email' | 'push', checked: boolean) => {
-        setUpdatingNotifications(true);
-        try {
-            const payload = type === 'email'
-                ? { emailNotifications: checked }
-                : { pushNotifications: checked };
 
-            const response = await api.patch("/users/notifications", payload);
-            if (response.data.success) {
-                if (type === 'email') {
-                    setEmailNotifications(checked);
-                } else {
-                    setPushNotifications(checked);
-                }
-                toast.success(`${type.charAt(0).toUpperCase() + type.slice(1)} notifications updated`);
-            }
-        } catch (error: any) {
-            toast.error("Failed to update notification settings");
-        } finally {
-            setUpdatingNotifications(false);
-        }
-    };
 
     if (fetching) {
         return (
@@ -290,51 +264,6 @@ const DriverProfile = () => {
                                     {updatingPassword ? "Updating..." : "Update Password"}
                                 </Button>
                             </form>
-                        </DialogContent>
-                    </Dialog>
-
-                    {/* Notifications Dialog */}
-                    <Dialog open={notificationsDialogOpen} onOpenChange={setNotificationsDialogOpen}>
-                        <DialogTrigger asChild>
-                            <button className="w-full p-4 flex items-center gap-4 hover:bg-muted/50 transition-colors text-left group">
-                                <div className="p-2 bg-muted rounded-lg group-hover:bg-primary/10 transition-colors">
-                                    <Bell className="w-4 h-4 text-muted-foreground group-hover:text-primary" />
-                                </div>
-                                <div className="flex-1">
-                                    <p className="text-sm font-bold">Notifications</p>
-                                    <p className="text-[10px] text-muted-foreground font-medium">Manage push & email updates</p>
-                                </div>
-                            </button>
-                        </DialogTrigger>
-                        <DialogContent>
-                            <DialogHeader>
-                                <DialogTitle>Notification Settings</DialogTitle>
-                                <DialogDescription>Choose how you want to be notified of new loads and updates.</DialogDescription>
-                            </DialogHeader>
-                            <div className="space-y-6 py-4">
-                                <div className="flex items-center justify-between">
-                                    <div className="space-y-0.5">
-                                        <Label className="text-base font-bold">Email Notifications</Label>
-                                        <p className="text-sm text-muted-foreground font-medium">Receive load details via email</p>
-                                    </div>
-                                    <Switch
-                                        checked={emailNotifications}
-                                        onCheckedChange={(checked) => handleNotificationToggle('email', checked)}
-                                        disabled={updatingNotifications}
-                                    />
-                                </div>
-                                <div className="flex items-center justify-between">
-                                    <div className="space-y-0.5">
-                                        <Label className="text-base font-bold">Push Notifications</Label>
-                                        <p className="text-sm text-muted-foreground font-medium">Receive real-time alerts on your device</p>
-                                    </div>
-                                    <Switch
-                                        checked={pushNotifications}
-                                        onCheckedChange={(checked) => handleNotificationToggle('push', checked)}
-                                        disabled={updatingNotifications}
-                                    />
-                                </div>
-                            </div>
                         </DialogContent>
                     </Dialog>
                 </Card>

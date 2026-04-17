@@ -97,12 +97,12 @@ const Footer = () => {
             © 2025 HighnHeavy LLC. All rights reserved.
           </p>
           <div className="flex gap-6 text-sm">
-            <a href="#" className="text-gray-400 hover:text-primary transition-colors">
+            <Link to="/privacy-policy" className="text-gray-400 hover:text-primary transition-colors">
               Privacy Policy
-            </a>
-            <a href="#" className="text-gray-400 hover:text-primary transition-colors">
+            </Link>
+            <Link to="/terms-of-service" className="text-gray-400 hover:text-primary transition-colors">
               Terms of Service
-            </a>
+            </Link>
           </div>
         </div>
       </div>

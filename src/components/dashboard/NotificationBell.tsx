@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { Bell } from "lucide-react";
+import { Bell, Package, MessageSquare, FileText, CheckCircle, RefreshCw, CreditCard, Star, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
     DropdownMenu,
@@ -102,17 +102,18 @@ const NotificationBell = () => {
     };
 
     const getNotificationIcon = (type: string) => {
-        const iconMap: Record<string, string> = {
-            booking: "📦",
-            message: "💬",
-            quote: "📋",
-            quote_accepted: "✅",
-            booking_update: "🔄",
-            payment: "💰",
-            review: "⭐",
-            system: "🔔"
+        const iconProps = { size: 18, className: "text-primary" };
+        const iconMap: Record<string, JSX.Element> = {
+            booking: <Package {...iconProps} />,
+            message: <MessageSquare {...iconProps} />,
+            quote: <FileText {...iconProps} />,
+            quote_accepted: <CheckCircle {...iconProps} className="text-green-500" />,
+            booking_update: <RefreshCw {...iconProps} />,
+            payment: <CreditCard {...iconProps} />,
+            review: <Star {...iconProps} className="text-yellow-500" />,
+            system: <Bell {...iconProps} />
         };
-        return iconMap[type] || "🔔";
+        return iconMap[type] || <Bell {...iconProps} />;
     };
 
     return (
@@ -166,7 +167,7 @@ const NotificationBell = () => {
                                         }`}
                                 >
                                     <div className="flex gap-3">
-                                        <div className="text-2xl flex-shrink-0">
+                                        <div className="flex-shrink-0 mt-1 p-2 bg-primary/10 rounded-full h-10 w-10 flex items-center justify-center">
                                             {getNotificationIcon(notification.type)}
                                         </div>
                                         <div className="flex-1 min-w-0">

@@ -48,14 +48,23 @@ type BookingTab = 'available' | 'my-quotes' | 'won-jobs';
 
 interface AvailableBookingsProps {
   onMessage?: (bookingId: string, participantId: string) => void;
+  initialVehicles?: any[];
 }
 
-const AvailableBookings: React.FC<AvailableBookingsProps> = ({ onMessage }) => {
+const AvailableBookings: React.FC<AvailableBookingsProps> = ({ onMessage, initialVehicles }) => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<BookingTab>('available');
-  const [bookings, setBookings] = useState<any[]>([]);
+  const [dashboardData, setDashboardData] = useState<{
+    available: any[];
+    'my-quotes': any[];
+    'won-jobs': any[];
+  }>({
+    available: [],
+    'my-quotes': [],
+    'won-jobs': []
+  });
   const [loading, setLoading] = useState(true);
-  const [vehicles, setVehicles] = useState<any[]>([]);
+  const [vehicles, setVehicles] = useState<any[]>(initialVehicles || []);
 
   const [selectedBooking, setSelectedBooking] = useState<any | null>(null);
   const [quoteDialogOpen, setQuoteDialogOpen] = useState(false);
@@ -68,28 +77,34 @@ const AvailableBookings: React.FC<AvailableBookingsProps> = ({ onMessage }) => {
   const [selectedShipperId, setSelectedShipperId] = useState<string | null>(null);
 
   useEffect(() => {
-    fetchBookings();
-  }, [activeTab]);
-
-  useEffect(() => {
-    fetchResources();
+    syncDashboardData();
+    if (!initialVehicles) {
+      fetchResources();
+    }
   }, []);
 
-  const fetchBookings = async () => {
+  useEffect(() => {
+    if (initialVehicles) {
+      setVehicles(initialVehicles);
+    }
+  }, [initialVehicles]);
+
+  const syncDashboardData = async () => {
     setLoading(true);
     try {
-      let endpoint = '';
-      switch (activeTab) {
-        case 'available': endpoint = '/quotes/available'; break;
-        case 'my-quotes': endpoint = '/quotes/my-quotes'; break;
-        case 'won-jobs': endpoint = '/quotes/won-jobs'; break;
-      }
-      const response = await api.get(endpoint);
-      if (response.data.success) {
-        setBookings(response.data.data);
-      }
+      const [availableRes, myQuotesRes, wonJobsRes] = await Promise.all([
+        api.get('/quotes/available'),
+        api.get('/quotes/my-quotes'),
+        api.get('/quotes/won-jobs')
+      ]);
+
+      setDashboardData({
+        available: availableRes.data.success ? availableRes.data.data : [],
+        'my-quotes': myQuotesRes.data.success ? myQuotesRes.data.data : [],
+        'won-jobs': wonJobsRes.data.success ? wonJobsRes.data.data : []
+      });
     } catch (error) {
-      toast.error('Failed to load jobs');
+      toast.error('Failed to sync escort board');
       console.error(error);
     } finally {
       setLoading(false);
@@ -125,7 +140,7 @@ const AvailableBookings: React.FC<AvailableBookingsProps> = ({ onMessage }) => {
       if (response.data.success) {
         toast.success(`Quote submitted for ${selectedBooking.id.split('-')[0]}. Admin will review.`);
         setQuoteDialogOpen(false);
-        fetchBookings();
+        syncDashboardData();
         resetQuoteForm();
       }
     } catch (error: any) {
@@ -140,7 +155,7 @@ const AvailableBookings: React.FC<AvailableBookingsProps> = ({ onMessage }) => {
       const response = await api.patch(`/bookings/${bookingId}/status`, { status: newStatus });
       if (response.data.success) {
         toast.success(`Booking status updated to ${newStatus.replace('_', ' ')}`);
-        fetchBookings();
+        syncDashboardData();
       }
     } catch (error: any) {
       toast.error(error.response?.data?.message || 'Failed to update status');
@@ -217,11 +232,11 @@ const AvailableBookings: React.FC<AvailableBookingsProps> = ({ onMessage }) => {
 
       {/* Bookings List */}
       <div className="space-y-4">
-        {loading ? (
+        {loading && dashboardData[activeTab].length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12">
             <Loader size="md" text="Fetching records..." />
           </div>
-        ) : bookings.length === 0 ? (
+        ) : dashboardData[activeTab].length === 0 ? (
           <Card>
             <CardContent className="p-12 text-center">
               <Package className="h-12 w-12 mx-auto text-muted-foreground mb-4 opacity-20" />
@@ -234,7 +249,7 @@ const AvailableBookings: React.FC<AvailableBookingsProps> = ({ onMessage }) => {
             </CardContent>
           </Card>
         ) : (
-          bookings.map((booking) => (
+          dashboardData[activeTab].map((booking) => (
             <Card key={booking.id} className="hover:border-primary/50 transition-colors border shadow-sm">
               <CardContent className="p-6">
                 <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4">
@@ -273,7 +288,7 @@ const AvailableBookings: React.FC<AvailableBookingsProps> = ({ onMessage }) => {
                         <div>
                           <p className="text-xs text-muted-foreground uppercase font-bold tracking-wider">Cargo</p>
                           <p className="font-medium">{booking.cargo_type}</p>
-                          <p className="text-sm text-muted-foreground truncate max-w-[200px]">{booking.dimensions_length_ft}x{booking.dimensions_width_ft}ft • {Number(booking.weight_lbs).toLocaleString()} lbs</p>
+                          <p className="text-sm text-muted-foreground truncate max-w-[200px]">{booking.dimensions_length_ft}x{booking.dimensions_width_ft}ft • {Number(booking.weight_lbs).toLocaleString()} {booking.weight_unit || 'lbs'}</p>
                         </div>
                       </div>
                     </div>

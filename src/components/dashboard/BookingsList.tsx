@@ -160,7 +160,7 @@ const BookingsList = ({ onTrack, onMessage, onReview }: BookingsListProps) => {
     carrier: b.carrier_id || "Pending Assignment",
     price: b.agreed_price || 0,
     dimensions: `${b.dimensions_length_ft}ft x ${b.dimensions_width_ft}ft x ${b.dimensions_height_ft}ft`,
-    weight: `${Number(b.weight_lbs).toLocaleString()} lbs`,
+    weight: `${Number(b.weight_lbs).toLocaleString()} ${b.weight_unit || 'lbs'}`,
     specialInstructions: b.special_instructions,
     carrier_id: b.carrier_id,
     carrier_name: b.carrier_name,

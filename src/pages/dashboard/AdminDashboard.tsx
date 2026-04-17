@@ -8,9 +8,11 @@ import ManagePayouts from "@/components/dashboard/admin/ManagePayouts";
 import OverviewSection from "@/components/dashboard/admin/OverviewSection";
 import AdminMessages from "@/components/dashboard/admin/AdminMessages";
 import ManageQuotes from "@/components/dashboard/admin/ManageQuotes";
+import ManageCargoTypes from "@/components/dashboard/admin/ManageCargoTypes";
+import ManageSettings from "@/components/dashboard/admin/ManageSettings";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 
-type AdminSection = "overview" | "shippers" | "carriers" | "escorts" | "bookings" | "payouts" | "messages" | "quotes";
+type AdminSection = "overview" | "shippers" | "carriers" | "escorts" | "bookings" | "payouts" | "messages" | "quotes" | "cargo-types" | "settings";
 
 const AdminDashboard = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -56,6 +58,10 @@ const AdminDashboard = () => {
           initialContext={chatContext}
           initialConversationId={searchParams.get("conversationId")}
         />; // Standard prop passing
+      case "cargo-types":
+        return <ManageCargoTypes />;
+      case "settings":
+        return <ManageSettings />;
 
       default:
         return <OverviewSection setActiveSection={(s: any) => setActiveSection(s as AdminSection)} />;

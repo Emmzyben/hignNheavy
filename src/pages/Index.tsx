@@ -98,7 +98,7 @@ const Index = () => {
             className="text-3xl md:text-5xl lg:text-6xl font-display font-black mb-6"
           >
             Move Oversize Cargo <br />
-            <span className="text-primary">Seamlessly Across Texas</span>
+            <span className="text-primary">Seamlessly Across the South</span>
           </motion.h1>
           <motion.p
             initial={{ opacity: 0, y: 20 }}
@@ -293,7 +293,7 @@ const Index = () => {
               transition={{ duration: 0.8 }}
             >
               <h2 className="text-4xl md:text-5xl font-display font-black mb-6">
-                Seamless Oversize Cargo Movement Across Texas
+                Seamless Oversize Cargo Movement Across the South
               </h2>
               <p className="text-lg text-muted-foreground mb-8">
                 HighnHeavy simplifies the complexities of transporting your heavy and oversized loads. Get instant quotes, automated permits, and reliable carriers and escorts, all in one platform.
@@ -383,7 +383,7 @@ const Index = () => {
             transition={{ duration: 0.6, delay: 0.2 }}
             className="text-xl mb-8 max-w-2xl mx-auto text-gray-200"
           >
-            Experience the easiest way to book and manage oversize cargo transportation in Texas.
+            Experience the easiest way to book and manage oversize cargo transportation across Texas, Oklahoma, and Louisiana.
           </motion.p>
           <motion.div
             initial={{ opacity: 0, y: 20 }}

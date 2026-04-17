@@ -18,7 +18,10 @@ const SignIn = () => {
     const [password, setPassword] = useState("");
     const [showPassword, setShowPassword] = useState(false);
     const [loading, setLoading] = useState(false);
-    const { login, user } = useAuth();
+    const [showOTP, setShowOTP] = useState(false);
+    const [otpCode, setOtpCode] = useState("");
+    const [tempUserId, setTempUserId] = useState("");
+    const { login, verifyOTP, user } = useAuth();
     const navigate = useNavigate();
 
     // Redirect if already logged in
@@ -66,11 +69,31 @@ const SignIn = () => {
         setLoading(true);
 
         try {
-            await login(email, password);
-            toast.success("Login successful!");
-            // Navigation will happen automatically via useEffect when user state updates
+            const result = await login(email, password) as { requiresOTP?: boolean; userId?: string } | undefined;
+            if (result?.requiresOTP) {
+                setShowOTP(true);
+                setTempUserId(result.userId || "");
+                toast.info("A verification code has been sent to your email.");
+            } else {
+                toast.success("Login successful!");
+            }
         } catch (error: any) {
             toast.error(error.message || "Login failed. Please check your credentials.");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    const handleVerifyOTP = async (e: React.FormEvent) => {
+        e.preventDefault();
+        setLoading(true);
+
+        try {
+            await verifyOTP(tempUserId, otpCode);
+            toast.success("Identity verified! Welcome.");
+            // Navigation will happen via useEffect
+        } catch (error: any) {
+            toast.error(error.message || "Invalid or expired code. Please try again.");
         } finally {
             setLoading(false);
         }
@@ -99,72 +122,125 @@ const SignIn = () => {
                         className="max-w-md mx-auto bg-card p-8 rounded-2xl shadow-2xl border border-border"
                     >
                         <div className="text-center mb-8">
-                            <h1 className="text-3xl font-display font-black mb-2">Welcome Back</h1>
-                            <p className="text-muted-foreground">Sign in to your HighnHeavy account</p>
+                            <h1 className="text-3xl font-display font-black mb-2">
+                                {showOTP ? "Verify Identity" : "Welcome Back"}
+                            </h1>
+                            <p className="text-muted-foreground">
+                                {showOTP 
+                                    ? "Enter the 6-digit code sent to your email" 
+                                    : "Sign in to your HighnHeavy account"}
+                            </p>
                         </div>
 
-                        <form onSubmit={handleSubmit} className="space-y-6">
-                            <div className="space-y-2">
-                                <Label htmlFor="email">Email Address</Label>
-                                <Input
-                                    id="email"
-                                    type="email"
-                                    placeholder="name@example.com"
-                                    value={email}
-                                    onChange={(e) => setEmail(e.target.value)}
-                                    required
-                                    className="bg-background"
-                                />
-                            </div>
-
-                            <div className="space-y-2">
-                                <div className="flex items-center justify-between">
-                                    <Label htmlFor="password">Password</Label>
-                                    <Link
-                                        to="/forgot-password"
-                                        className="text-sm text-primary hover:underline font-medium"
-                                    >
-                                        Forgot password?
-                                    </Link>
-                                </div>
-                                <div className="relative">
+                        {!showOTP ? (
+                            <form onSubmit={handleSubmit} className="space-y-6">
+                                <div className="space-y-2">
+                                    <Label htmlFor="email">Email Address</Label>
                                     <Input
-                                        id="password"
-                                        type={showPassword ? "text" : "password"}
-                                        value={password}
-                                        onChange={(e) => setPassword(e.target.value)}
+                                        id="email"
+                                        type="email"
+                                        placeholder="name@example.com"
+                                        value={email}
+                                        onChange={(e) => setEmail(e.target.value)}
                                         required
-                                        className="bg-background pr-10"
+                                        className="bg-background"
                                     />
-                                    <button
-                                        type="button"
-                                        onClick={() => setShowPassword(!showPassword)}
-                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
-                                    >
-                                        {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                                    </button>
                                 </div>
-                            </div>
 
-                            <div className="flex items-center space-x-2">
-                                <Checkbox id="remember" />
-                                <label
-                                    htmlFor="remember"
-                                    className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                                <div className="space-y-2">
+                                    <div className="flex items-center justify-between">
+                                        <Label htmlFor="password">Password</Label>
+                                        <Link
+                                            to="/forgot-password"
+                                            className="text-sm text-primary hover:underline font-medium"
+                                        >
+                                            Forgot password?
+                                        </Link>
+                                    </div>
+                                    <div className="relative">
+                                        <Input
+                                            id="password"
+                                            type={showPassword ? "text" : "password"}
+                                            value={password}
+                                            onChange={(e) => setPassword(e.target.value)}
+                                            required
+                                            className="bg-background pr-10"
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => setShowPassword(!showPassword)}
+                                            className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                                        >
+                                            {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+                                        </button>
+                                    </div>
+                                </div>
+
+                                <div className="flex items-center space-x-2">
+                                    <Checkbox id="remember" />
+                                    <label
+                                        htmlFor="remember"
+                                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70"
+                                    >
+                                        Remember me
+                                    </label>
+                                </div>
+
+                                <Button
+                                    type="submit"
+                                    size="lg"
+                                    className="w-full hover:scale-105 transition-transform duration-200"
+                                    disabled={loading}
                                 >
-                                    Remember me
-                                </label>
-                            </div>
+                                    {loading ? <Loader size="sm" text="Signing in..." /> : "Sign In"}
+                                </Button>
+                            </form>
+                        ) : (
+                            <form onSubmit={handleVerifyOTP} className="space-y-6">
+                                <div className="space-y-2 text-center">
+                                    <Label htmlFor="otp">Verification Code</Label>
+                                    <Input
+                                        id="otp"
+                                        type="text"
+                                        maxLength={6}
+                                        placeholder="000000"
+                                        value={otpCode}
+                                        onChange={(e) => setOtpCode(e.target.value.replace(/\D/g, ""))}
+                                        required
+                                        className="bg-background text-center text-2xl tracking-[1em] font-bold h-16"
+                                        autoFocus
+                                    />
+                                </div>
 
-                            <Button
-                                type="submit"
-                                size="lg"
-                                className="w-full hover:scale-105 transition-transform duration-200"
-                                disabled={loading}
-                            >
-                                {loading ? <Loader size="sm" text="Signing in..." /> : "Sign In"}
-                            </Button>
-                        </form>
+                                <div className="space-y-3">
+                                    <Button
+                                        type="submit"
+                                        size="lg"
+                                        className="w-full hover:scale-105 transition-transform duration-200"
+                                        disabled={loading || otpCode.length !== 6}
+                                    >
+                                        {loading ? <Loader size="sm" text="Verifying..." /> : "Verify & Sign In"}
+                                    </Button>
+
+                                    <Button
+                                        type="button"
+                                        variant="ghost"
+                                        className="w-full text-muted-foreground"
+                                        onClick={() => {
+                                            setShowOTP(false);
+                                            setOtpCode("");
+                                        }}
+                                        disabled={loading}
+                                    >
+                                        Back to Login
+                                    </Button>
+                                </div>
+
+                                <p className="text-center text-xs text-muted-foreground">
+                                    Didn't receive the code? Check your spam folder or try logging in again to resend.
+                                </p>
+                            </form>
+                        )}
 
                         <div className="mt-6 text-center text-sm">
                             <span className="text-muted-foreground">Don't have an account? </span>

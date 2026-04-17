@@ -53,6 +53,8 @@ const MENU_ITEMS: Record<string, any[]> = {
         { id: 'escorts', label: 'Manage Escorts', icon: Car },
         { id: 'bookings', label: 'All Bookings', icon: Package },
         { id: 'payouts', label: 'Financial Center', icon: Wallet },
+        { id: 'cargo-types', label: 'Cargo Types', icon: Settings },
+        { id: 'settings', label: 'Platform Settings', icon: LayoutDashboard },
         { id: 'messages', label: 'Messages', icon: MessageSquare },
     ],
     driver: [

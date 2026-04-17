@@ -40,7 +40,7 @@ const ActiveTrip = ({ onMessage }: ActiveTripProps) => {
                 setTrip({
                     id: b.id,
                     cargoName: b.cargo_type,
-                    weight: `${b.weight_lbs.toLocaleString()} lbs`,
+                    weight: `${b.weight_lbs.toLocaleString()} ${b.weight_unit || 'lbs'}`,
                     shipper: {
                         name: b.shipper_company || b.shipper_name,
                         phone: b.shipper_phone || "+1 (555) 000-0000",

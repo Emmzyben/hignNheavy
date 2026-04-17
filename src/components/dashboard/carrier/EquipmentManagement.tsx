@@ -26,6 +26,11 @@ interface Equipment {
   photos: string[];
 }
 
+interface EquipmentManagementProps {
+  initialEquipment?: any[];
+  onRefresh?: () => void;
+}
+
 const equipmentTypes = [
   'Lowboy Trailer',
   'Step Deck',
@@ -36,9 +41,14 @@ const equipmentTypes = [
   'Multi-Axle',
 ];
 
-const EquipmentManagement = () => {
-  const [equipment, setEquipment] = useState<Equipment[]>([]);
-  const [loading, setLoading] = useState(true);
+const EquipmentManagement = ({ initialEquipment, onRefresh }: EquipmentManagementProps) => {
+  const parseEquipment = (data: any[]) => data.map((item: any) => ({
+    ...item,
+    photos: typeof item.photos === 'string' ? JSON.parse(item.photos) : (item.photos || [])
+  }));
+
+  const [equipment, setEquipment] = useState<Equipment[]>(initialEquipment ? parseEquipment(initialEquipment) : []);
+  const [loading, setLoading] = useState(!initialEquipment);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingEquipment, setEditingEquipment] = useState<Equipment | null>(null);
   const [isSaving, setIsSaving] = useState(false);
@@ -61,8 +71,17 @@ const EquipmentManagement = () => {
   });
 
   useEffect(() => {
-    fetchEquipment();
+    if (!initialEquipment) {
+      fetchEquipment();
+    }
   }, []);
+
+  useEffect(() => {
+    if (initialEquipment) {
+      setEquipment(parseEquipment(initialEquipment));
+      setLoading(false);
+    }
+  }, [initialEquipment]);
 
   const fetchEquipment = async () => {
     setLoading(true);
@@ -139,13 +158,15 @@ const EquipmentManagement = () => {
         const response = await api.put(`/vehicles/${editingEquipment.id}`, formData);
         if (response.data.success) {
           toast.success('Equipment updated successfully');
-          fetchEquipment();
+          if (onRefresh) onRefresh();
+          else fetchEquipment();
         }
       } else {
         const response = await api.post('/vehicles', formData);
         if (response.data.success) {
           toast.success('Equipment added successfully');
-          fetchEquipment();
+          if (onRefresh) onRefresh();
+          else fetchEquipment();
         }
       }
       setDialogOpen(false);
@@ -165,6 +186,7 @@ const EquipmentManagement = () => {
       const response = await api.delete(`/vehicles/${id}`);
       if (response.data.success) {
         toast.success('Equipment removed');
+        if (onRefresh) onRefresh();
         setEquipment(equipment.filter(e => e.id !== id));
       }
     } catch (error) {

@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { useNavigate } from "react-router-dom";
-import { Bell, CheckCheck, Trash2 } from "lucide-react";
+import { Bell, CheckCheck, Trash2, Package, MessageSquare, FileText, CheckCircle, RefreshCw, CreditCard, Star } from "lucide-react";
 import { toast } from "sonner";
 import Loader from "@/components/ui/Loader";
 
@@ -85,17 +85,18 @@ const Notifications = () => {
     };
 
     const getNotificationIcon = (type: string) => {
-        const iconMap: Record<string, string> = {
-            booking: "📦",
-            message: "💬",
-            quote: "📋",
-            quote_accepted: "✅",
-            booking_update: "🔄",
-            payment: "💰",
-            review: "⭐",
-            system: "🔔"
+        const iconProps = { size: 24, className: "text-primary" };
+        const iconMap: Record<string, JSX.Element> = {
+            booking: <Package {...iconProps} />,
+            message: <MessageSquare {...iconProps} />,
+            quote: <FileText {...iconProps} />,
+            quote_accepted: <CheckCircle {...iconProps} className="text-green-500" />,
+            booking_update: <RefreshCw {...iconProps} />,
+            payment: <CreditCard {...iconProps} />,
+            review: <Star {...iconProps} className="text-yellow-500" />,
+            system: <Bell {...iconProps} />
         };
-        return iconMap[type] || "🔔";
+        return iconMap[type] || <Bell {...iconProps} />;
     };
 
     return (
@@ -136,7 +137,7 @@ const Notifications = () => {
                                 onClick={() => handleNotificationClick(notification)}
                             >
                                 <CardContent className="p-4 flex gap-4 items-start">
-                                    <div className="text-3xl mt-1">
+                                    <div className="flex-shrink-0 p-3 bg-primary/10 rounded-full flex items-center justify-center">
                                         {getNotificationIcon(notification.type)}
                                     </div>
                                     <div className="flex-1 min-w-0">

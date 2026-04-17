@@ -76,7 +76,7 @@ const MyTrips = () => {
                 const mapped = response.data.data.map((b: any) => ({
                     id: b.id,
                     cargoName: b.cargo_type,
-                    weight: `${b.weight_lbs.toLocaleString()} lbs`,
+                    weight: `${b.weight_lbs.toLocaleString()} ${b.weight_unit || 'lbs'}`,
                     status: b.status,
                     origin: { city: b.pickup_city, state: b.pickup_state },
                     destination: { city: b.delivery_city, state: b.delivery_state },

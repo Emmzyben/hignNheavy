@@ -34,11 +34,73 @@ const PaymentSection = () => {
   const [selectedBooking, setSelectedBooking] = useState<any | null>(null);
   const [paymentMethod, setPaymentMethod] = useState("stripe");
   const [processing, setProcessing] = useState(false);
+  const [verifyingPayment, setVerifyingPayment] = useState(false);
+  const [feePercentage, setFeePercentage] = useState(0.15); // Default to 15%
 
   useEffect(() => {
     fetchAwaitingPayments();
     fetchPaymentHistory();
+
+    // Check for Stripe redirect back
+    const query = new URLSearchParams(window.location.search);
+    const paymentSuccess = query.get("payment_success");
+    const provider = query.get("provider");
+    const token = query.get("token");
+
+    if (paymentSuccess === "true") {
+      if (provider === 'paypal' && token) {
+        const bookingId = localStorage.getItem("pending_paypal_booking_id");
+        if (bookingId) {
+          handlePaypalCapture(token, bookingId);
+        }
+      } else {
+        toast.success("Payment successful!", {
+          description: `Your Stripe payment is being processed. It will appear as 'Booked' shortly.`,
+        });
+        
+        // Refresh after a short delay for Stripe webhook
+        setTimeout(() => {
+          fetchAwaitingPayments();
+          fetchPaymentHistory();
+        }, 3000);
+      }
+
+      // Remove query params from URL
+      const newUrl = window.location.pathname + window.location.search
+        .replace(/([?&])payment_success=true(&?)/, "$1")
+        .replace(/([?&])provider=paypal(&?)/, "$1")
+        .replace(/([?&])token=[^&]+(&?)/, "$1")
+        .replace(/([?&])PayerID=[^&]+(&?)/, "$1")
+        .replace(/[?&]$/, "");
+      window.history.replaceState({}, "", newUrl);
+    }
   }, []);
+
+  const handlePaypalCapture = async (token: string, bookingId: string) => {
+    setVerifyingPayment(true);
+    try {
+      const response = await api.post("/payments/capture-paypal", {
+        token,
+        bookingId,
+      });
+
+      if (response.data.success) {
+        toast.success("Payment verified!", {
+          description: "Your booking has been confirmed.",
+        });
+        fetchAwaitingPayments();
+        fetchPaymentHistory();
+      }
+    } catch (error: any) {
+      console.error("PayPal capture error:", error);
+      toast.error(error.response?.data?.message || "Failed to verify PayPal payment");
+    } finally {
+      setVerifyingPayment(false);
+      localStorage.removeItem("pending_paypal_booking_id");
+    }
+  };
+
+
 
   const fetchAwaitingPayments = async () => {
     setLoading(true);
@@ -46,6 +108,9 @@ const PaymentSection = () => {
       const response = await api.get("/payments/awaiting");
       if (response.data.success) {
         setAwaitingPayments(response.data.data);
+        if (response.data.platformFeePercentage !== undefined) {
+          setFeePercentage(response.data.platformFeePercentage);
+        }
       }
     } catch (error: any) {
       console.error("Fetch awaiting payments error:", error);
@@ -75,17 +140,42 @@ const PaymentSection = () => {
   };
 
   const processPayment = async () => {
+
     if (!selectedBooking) return;
 
     setProcessing(true);
     try {
+      if (paymentMethod === "stripe") {
+        const response = await api.post("/payments/create-checkout-session", {
+          bookingId: selectedBooking.id,
+        });
+
+        if (response.data.success && response.data.url) {
+          // Redirect to Stripe Checkout
+          window.location.href = response.data.url;
+          return;
+        }
+      } else if (paymentMethod === "paypal") {
+        const response = await api.post("/payments/create-paypal-order", {
+          bookingId: selectedBooking.id,
+        });
+
+        if (response.data.success && response.data.url) {
+          // Store booking ID to correlate on return
+          localStorage.setItem("pending_paypal_booking_id", selectedBooking.id);
+          // Redirect to PayPal
+          window.location.href = response.data.url;
+          return;
+        }
+      }
+
+      // Placeholder or other payment methods
       const response = await api.post("/payments/process", {
         bookingId: selectedBooking.id,
         paymentMethod,
         paymentDetails: {
-          // Placeholder data - will be replaced with real payment gateway integration
-          note: `Payment for booking ${selectedBooking.id}`
-        }
+          note: `Payment for booking ${selectedBooking.id}`,
+        },
       });
 
       if (response.data.success) {
@@ -104,10 +194,18 @@ const PaymentSection = () => {
     }
   };
 
+  const calculateFee = (booking: any) => {
+    const amount = parseFloat(booking.agreed_price || 0);
+    if (booking.markup_value === null || booking.markup_value === undefined) {
+      return amount * feePercentage;
+    }
+    return amount * (parseFloat(booking.markup_value) / 100);
+  };
+
   const calculateTotals = () => {
     const totalOutstanding = awaitingPayments.reduce((acc, booking) => {
       const amount = parseFloat(booking.agreed_price || 0);
-      const fee = amount * 0.15;
+      const fee = calculateFee(booking);
       return acc + amount + fee;
     }, 0);
 
@@ -128,6 +226,13 @@ const PaymentSection = () => {
 
   return (
     <div className="space-y-6">
+      {verifyingPayment && (
+        <div className="bg-primary/5 border border-primary/20 rounded-xl p-6 flex flex-col items-center justify-center text-center">
+          <Loader size="md" text="Verifying PayPal Payment..." />
+          <p className="text-sm text-muted-foreground mt-2">Please do not close this window while we confirm your transaction.</p>
+        </div>
+      )}
+
       {/* Summary Cards */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="bg-card p-6 rounded-xl border border-border">
@@ -177,7 +282,7 @@ const PaymentSection = () => {
           <div className="space-y-4">
             {awaitingPayments.map((booking) => {
               const bookingAmount = parseFloat(booking.agreed_price || 0);
-              const platformFee = bookingAmount * 0.15;
+              const platformFee = calculateFee(booking);
               const totalAmount = bookingAmount + platformFee;
 
               return (
@@ -209,7 +314,9 @@ const PaymentSection = () => {
                           <span className="font-semibold">${bookingAmount.toLocaleString()}</span>
                         </div>
                         <div className="flex justify-between">
-                          <span className="text-muted-foreground">Platform Fee (15%):</span>
+                          <span className="text-muted-foreground">
+                            Platform Fee ({booking.markup_value || Math.round(feePercentage * 100)}%):
+                          </span>
                           <span className="font-semibold">${platformFee.toFixed(2)}</span>
                         </div>
                         <div className="flex justify-between pt-2 border-t">
@@ -318,13 +425,15 @@ const PaymentSection = () => {
                   <span className="font-semibold">${parseFloat(selectedBooking.agreed_price).toLocaleString()}</span>
                 </div>
                 <div className="flex justify-between text-sm">
-                  <span className="text-muted-foreground">Platform Fee (15%):</span>
-                  <span className="font-semibold">${(parseFloat(selectedBooking.agreed_price) * 0.15).toFixed(2)}</span>
+                  <span className="text-muted-foreground">
+                    Platform Fee ({selectedBooking.markup_value || Math.round(feePercentage * 100)}%):
+                  </span>
+                  <span className="font-semibold">${calculateFee(selectedBooking).toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between pt-2 border-t border-border">
                   <span className="font-bold">Total Amount:</span>
                   <span className="text-2xl font-bold text-primary">
-                    ${(parseFloat(selectedBooking.agreed_price) * 1.15).toFixed(2)}
+                    ${(parseFloat(selectedBooking.agreed_price) + calculateFee(selectedBooking)).toFixed(2)}
                   </span>
                 </div>
               </div>
@@ -358,7 +467,9 @@ const PaymentSection = () => {
               <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 text-sm text-blue-800">
                 <p className="font-semibold mb-1">🔒 Secure Payment</p>
                 <p className="text-xs">
-                  Your payment information is encrypted and secure. This is a placeholder for {paymentMethod === 'stripe' ? 'Stripe' : 'PayPal'} integration.
+                  {paymentMethod === 'stripe'
+                    ? 'You will be redirected to Stripe for a secure payment experience.'
+                    : 'You will be redirected to PayPal for a secure payment experience.'}
                 </p>
               </div>
 
@@ -370,7 +481,7 @@ const PaymentSection = () => {
                 {processing ? (
                   <Loader size="sm" text="Processing Payment..." />
                 ) : (
-                  `Pay $${(parseFloat(selectedBooking.agreed_price) * 1.15).toFixed(2)}`
+                  `Pay $${(parseFloat(selectedBooking.agreed_price) + calculateFee(selectedBooking)).toFixed(2)}`
                 )}
               </Button>
             </div>

@@ -22,9 +22,26 @@ interface Driver {
   avatarUrl?: string;
 }
 
-const DriversManagement = () => {
-  const [drivers, setDrivers] = useState<Driver[]>([]);
-  const [loading, setLoading] = useState(true);
+interface DriversManagementProps {
+  initialDrivers?: any[];
+  onRefresh?: () => void;
+}
+
+const DriversManagement = ({ initialDrivers, onRefresh }: DriversManagementProps) => {
+  const mapDrivers = (data: any[]) => data.map((d: any) => ({
+    id: d.id,
+    name: d.name,
+    email: d.email,
+    phone: d.phone,
+    license: d.license_number,
+    licenseExpiry: d.license_expiry ? new Date(d.license_expiry).toISOString().split('T')[0] : '',
+    status: d.status,
+    completedJobs: d.completed_jobs,
+    avatarUrl: d.avatar_url
+  }));
+
+  const [drivers, setDrivers] = useState<Driver[]>(initialDrivers ? mapDrivers(initialDrivers) : []);
+  const [loading, setLoading] = useState(!initialDrivers);
   const [submitting, setSubmitting] = useState(false);
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingDriver, setEditingDriver] = useState<Driver | null>(null);
@@ -39,8 +56,17 @@ const DriversManagement = () => {
   });
 
   useEffect(() => {
-    fetchDrivers();
+    if (!initialDrivers) {
+      fetchDrivers();
+    }
   }, []);
+
+  useEffect(() => {
+    if (initialDrivers) {
+      setDrivers(mapDrivers(initialDrivers));
+      setLoading(false);
+    }
+  }, [initialDrivers]);
 
   const fetchDrivers = async () => {
     setLoading(true);
@@ -130,7 +156,8 @@ const DriversManagement = () => {
         const response = await api.put(`/drivers/${editingDriver.id}`, updatePayload);
         if (response.data.success) {
           toast.success('Driver updated successfully');
-          fetchDrivers();
+          if (onRefresh) onRefresh();
+          else fetchDrivers();
           setDialogOpen(false);
           resetForm();
         }
@@ -138,7 +165,8 @@ const DriversManagement = () => {
         const response = await api.post('/drivers', payload);
         if (response.data.success) {
           toast.success('Driver added successfully');
-          fetchDrivers();
+          if (onRefresh) onRefresh();
+          else fetchDrivers();
           setDialogOpen(false);
           resetForm();
         }
@@ -156,6 +184,7 @@ const DriversManagement = () => {
     try {
       const response = await api.delete(`/drivers/${id}`);
       if (response.data.success) {
+        if (onRefresh) onRefresh();
         setDrivers(drivers.filter(d => d.id !== id));
         toast.success('Driver removed');
       }

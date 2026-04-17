@@ -13,6 +13,7 @@ import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import ProfileImageUploader from "@/components/ProfileImageUploader";
 import Loader from "@/components/ui/Loader";
+import { locations, states } from "@/lib/locations";
 
 const Profile = () => {
     const { user, refreshUser } = useAuth();
@@ -44,9 +45,7 @@ const Profile = () => {
     const [showCurrentPassword, setShowCurrentPassword] = useState(false);
     const [showNewPassword, setShowNewPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-    const [emailNotifications, setEmailNotifications] = useState(true);
     const [updatingPassword, setUpdatingPassword] = useState(false);
-    const [updatingNotifications, setUpdatingNotifications] = useState(false);
 
     useEffect(() => {
         const fetchProfile = async () => {
@@ -55,7 +54,6 @@ const Profile = () => {
                 if (response.data.success) {
                     console.log("Profile data fetched:", response.data.data);
                     setProfileData(response.data.data);
-                    setEmailNotifications(response.data.data.email_notifications !== false);
                     refreshUser(); // Sync global context
                 }
             } catch (error: any) {
@@ -119,18 +117,7 @@ const Profile = () => {
         }
     };
 
-    const handleNotificationToggle = async (checked: boolean) => {
-        setUpdatingNotifications(true);
-        try {
-            await api.patch("/users/notifications", { emailNotifications: checked });
-            setEmailNotifications(checked);
-            toast.success(`Email notifications ${checked ? 'enabled' : 'disabled'}`);
-        } catch (error: any) {
-            toast.error(error.response?.data?.message || "Failed to update notification preferences");
-        } finally {
-            setUpdatingNotifications(false);
-        }
-    };
+
 
     if (fetching) {
         return (
@@ -225,20 +212,37 @@ const Profile = () => {
 
                                     <div className="grid grid-cols-3 gap-4">
                                         <div className="space-y-2">
-                                            <Label className="text-xs">City</Label>
-                                            <Input
-                                                value={profileData.city || ""}
-                                                onChange={(e) => updateField("city", e.target.value)}
-                                                className="bg-muted/30"
-                                            />
+                                            <Label className="text-xs">State</Label>
+                                            <select
+                                                value={profileData.state || ""}
+                                                onChange={(e) => {
+                                                    const val = e.target.value;
+                                                    setProfileData((prev: any) => ({ ...prev, state: val, city: "" }));
+                                                }}
+                                                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                            >
+                                                <option value="">Select State</option>
+                                                {states.map((state) => (
+                                                    <option key={state} value={state}>
+                                                        {state}
+                                                    </option>
+                                                ))}
+                                            </select>
                                         </div>
                                         <div className="space-y-2">
-                                            <Label className="text-xs">State</Label>
-                                            <Input
-                                                value={profileData.state || ""}
-                                                onChange={(e) => updateField("state", e.target.value)}
-                                                className="bg-muted/30"
-                                            />
+                                            <Label className="text-xs">City</Label>
+                                            <select
+                                                value={profileData.city || ""}
+                                                onChange={(e) => updateField("city", e.target.value)}
+                                                className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                                            >
+                                                <option value="">Select City</option>
+                                                {profileData.state && locations[profileData.state]?.map((city: string) => (
+                                                    <option key={city} value={city}>
+                                                        {city}
+                                                    </option>
+                                                ))}
+                                            </select>
                                         </div>
                                         <div className="space-y-2">
                                             <Label className="text-xs">Zip Code</Label>
@@ -423,25 +427,6 @@ const Profile = () => {
                                         </Button>
                                     </form>
 
-                                    {/* Notifications Section */}
-                                    <div className="bg-card shadow-sm border border-border rounded-2xl p-8 space-y-6">
-                                        <div className="flex items-center gap-2 mb-4">
-                                            <Bell size={20} className="text-primary" />
-                                            <h3 className="font-bold text-lg">Notification Preferences</h3>
-                                        </div>
-
-                                        <div className="flex items-center justify-between p-4 bg-muted/30 rounded-lg">
-                                            <div className="space-y-1">
-                                                <p className="font-semibold">Email Notifications</p>
-                                                <p className="text-sm text-muted-foreground">Receive updates about bookings, messages, and important account activity</p>
-                                            </div>
-                                            <Switch
-                                                checked={emailNotifications}
-                                                onCheckedChange={handleNotificationToggle}
-                                                disabled={updatingNotifications}
-                                            />
-                                        </div>
-                                    </div>
                                 </div>
                             </TabsContent>
                         </Tabs>

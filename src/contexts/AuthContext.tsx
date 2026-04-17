@@ -20,7 +20,8 @@ interface AuthContextType {
     user: User | null;
     token: string | null;
     loading: boolean;
-    login: (email: string, password: string) => Promise<void>;
+    login: (email: string, password: string) => Promise<{ requiresOTP?: boolean; userId?: string } | void>;
+    verifyOTP: (userId: string, otp: string) => Promise<void>;
     register: (userData: RegisterData) => Promise<void>;
     logout: () => void;
     updateProfileStatus: (status: boolean) => void;
@@ -81,6 +82,10 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             const response = await api.post('/auth/login', { email, password });
 
             if (response.data.success) {
+                if (response.data.requiresOTP) {
+                    return { requiresOTP: true, userId: response.data.userId };
+                }
+
                 const { token: newToken, user: newUser } = response.data.data;
 
                 setToken(newToken);
@@ -91,6 +96,25 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
             }
         } catch (error: any) {
             const message = error.response?.data?.message || 'Login failed';
+            throw new Error(message);
+        }
+    };
+
+    const verifyOTP = async (userId: string, otp: string) => {
+        try {
+            const response = await api.post('/auth/verify-otp', { userId, otp });
+
+            if (response.data.success) {
+                const { token: newToken, user: newUser } = response.data.data;
+
+                setToken(newToken);
+                setUser(newUser);
+
+                localStorage.setItem('token', newToken);
+                localStorage.setItem('user', JSON.stringify(newUser));
+            }
+        } catch (error: any) {
+            const message = error.response?.data?.message || 'OTP verification failed';
             throw new Error(message);
         }
     };
@@ -149,6 +173,7 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
         token,
         loading,
         login,
+        verifyOTP,
         register,
         logout,
         updateProfileStatus,

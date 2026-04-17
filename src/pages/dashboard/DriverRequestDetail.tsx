@@ -38,7 +38,7 @@ const DriverRequestDetail = () => {
                         setRequest({
                             id: found.id,
                             cargoName: found.cargo_type,
-                            weight: `${found.weight_lbs.toLocaleString()} lbs`,
+                            weight: `${found.weight_lbs.toLocaleString()} ${found.weight_unit || 'lbs'}`,
                             dimensions: `${found.dimensions_length_ft}ft x ${found.dimensions_width_ft}ft x ${found.dimensions_height_ft}ft`,
                             status: found.status,
                             origin: { city: found.pickup_city, state: found.pickup_state, address: found.pickup_address },

@@ -3,6 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 import {
     ArrowLeft,
     MapPin,
@@ -53,6 +54,7 @@ const AdminBookingDetail = () => {
     const [selectedCarrierQuote, setSelectedCarrierQuote] = useState<string>("");
     const [selectedEscortQuote, setSelectedEscortQuote] = useState<string>("");
     const [isAssigning, setIsAssigning] = useState(false);
+    const [markupValue, setMarkupValue] = useState<string>("");
 
     useEffect(() => {
         const fetchDetails = async () => {
@@ -98,9 +100,8 @@ const AdminBookingDetail = () => {
         }
 
         if (booking.requires_escort && !selectedEscortQuote) {
-            if (!confirm("This booking requires an escort but none is selected. Proceed anyway?")) {
-                return;
-            }
+            toast.error("This booking requires an escort. Please select an escort quote before finalizing.");
+            return;
         }
 
         setIsAssigning(true);
@@ -108,7 +109,8 @@ const AdminBookingDetail = () => {
             const response = await api.post("/admin/assign-providers", {
                 booking_id: booking.id,
                 carrier_quote_id: selectedCarrierQuote,
-                escort_quote_id: selectedEscortQuote || null
+                escort_quote_id: selectedEscortQuote || null,
+                markup_value: markupValue || null
             });
 
             if (response.data.success) {
@@ -246,7 +248,7 @@ const AdminBookingDetail = () => {
                                             </div>
                                             <div className="flex justify-between items-center text-xs">
                                                 <span className="text-muted-foreground font-medium">Gross Weight:</span>
-                                                <span className="font-bold font-mono">{Number(booking.weight_lbs).toLocaleString()} LBS</span>
+                                                <span className="font-bold font-mono">{Number(booking.weight_lbs).toLocaleString()} {booking.weight_unit || 'LBS'}</span>
                                             </div>
                                             <div className="flex justify-between items-center text-xs pt-2 border-t">
                                                 <span className="text-muted-foreground font-medium">Escort:</span>
@@ -530,10 +532,26 @@ const AdminBookingDetail = () => {
                                     )}
                                 </div>
                             </div>
+
+                            <div className="flex flex-col gap-2 min-w-[200px]">
+                                <p className="text-[10px] font-bold text-muted-foreground uppercase">Percentage Markup Override</p>
+                                <div className="flex items-center gap-2">
+                                    <div className="relative flex-1">
+                                        <Input 
+                                            type="number" 
+                                            placeholder="15"
+                                            value={markupValue}
+                                            onChange={(e) => setMarkupValue(e.target.value)}
+                                            className="h-9 w-24 font-bold pr-8"
+                                        />
+                                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm font-bold text-muted-foreground">%</span>
+                                    </div>
+                                </div>
+                            </div>
                             <Button
                                 className="h-14 px-12 font-black text-lg bg-green-600 hover:bg-green-700 shadow-xl shadow-green-600/20 rounded-2xl"
                                 onClick={handleAssign}
-                                disabled={isAssigning || !selectedCarrierQuote}
+                                disabled={isAssigning || !selectedCarrierQuote || (booking.requires_escort === 1 && !selectedEscortQuote)}
                             >
                                 {isAssigning ? <Loader size="sm" text="" /> : <CheckCircle2 className="mr-3" />}
                                 FINALIZE MATCHING

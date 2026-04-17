@@ -13,7 +13,7 @@ import { toast } from "sonner";
 import heroImage from "@/assets/hero.svg";
 import { motion, AnimatePresence } from "framer-motion";
 import { CheckCircle2, Eye, EyeOff } from "lucide-react";
-import { texasCities } from "@/lib/texasCities";
+import { locations, states } from "@/lib/locations";
 import Loader from "@/components/ui/Loader";
 
 const SignUp = () => {
@@ -337,11 +337,21 @@ const SignUp = () => {
                 <div className="grid grid-cols-3 gap-4">
                     <div className="space-y-2">
                         <Label>State</Label>
-                        <Input
-                            value="Texas"
-                            readOnly
-                            className="bg-muted cursor-not-allowed"
-                        />
+                        <select
+                            value={profileData.state}
+                            onChange={(e) => {
+                                const val = e.target.value;
+                                setProfileData(prev => ({ ...prev, state: val, city: "" }));
+                            }}
+                            required
+                            className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                        >
+                            {states.map((state) => (
+                                <option key={state} value={state}>
+                                    {state}
+                                </option>
+                            ))}
+                        </select>
                     </div>
                     <div className="space-y-2">
                         <Label>City</Label>
@@ -352,7 +362,7 @@ const SignUp = () => {
                             className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
                         >
                             <option value="">Select City</option>
-                            {texasCities.map((city) => (
+                            {profileData.state && locations[profileData.state]?.map((city) => (
                                 <option key={city} value={city}>
                                     {city}
                                 </option>

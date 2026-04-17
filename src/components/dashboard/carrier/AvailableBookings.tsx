@@ -18,15 +18,40 @@ type BookingTab = 'available' | 'my-quotes' | 'won-jobs';
 
 interface AvailableBookingsProps {
   onMessage?: (bookingId: string, participantId: string) => void;
+  initialDrivers?: any[];
+  initialEquipment?: any[];
 }
 
-const AvailableBookings = ({ onMessage }: AvailableBookingsProps) => {
+const STATUS_PRIORITY: Record<string, number> = {
+  'pending': 1,
+  'accepted': 2,
+  'booked': 3,
+  'awaiting_payment': 4,
+  'in_transit': 5,
+  'delivered': 6,
+  'completed': 7,
+  'rejected': 8,
+  'cancelled': 9,
+  'expired': 10,
+  'pending_quote': 11,
+  'quoted': 12,
+};
+
+const AvailableBookings = ({ onMessage, initialDrivers, initialEquipment }: AvailableBookingsProps) => {
   const navigate = useNavigate();
   const [activeTab, setActiveTab] = useState<BookingTab>('available');
-  const [bookings, setBookings] = useState<any[]>([]);
+  const [dashboardData, setDashboardData] = useState<{
+    available: any[];
+    'my-quotes': any[];
+    'won-jobs': any[];
+  }>({
+    available: [],
+    'my-quotes': [],
+    'won-jobs': []
+  });
   const [loading, setLoading] = useState(true);
-  const [drivers, setDrivers] = useState<any[]>([]);
-  const [vehicles, setVehicles] = useState<any[]>([]);
+  const [drivers, setDrivers] = useState<any[]>(initialDrivers || []);
+  const [vehicles, setVehicles] = useState<any[]>(initialEquipment || []);
 
   const [selectedBooking, setSelectedBooking] = useState<any | null>(null);
   const [quoteDialogOpen, setQuoteDialogOpen] = useState(false);
@@ -38,30 +63,40 @@ const AvailableBookings = ({ onMessage }: AvailableBookingsProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [shipperProfileOpen, setShipperProfileOpen] = useState(false);
   const [selectedShipperId, setSelectedShipperId] = useState<string | null>(null);
+  const [statusFilter, setStatusFilter] = useState<string>('all');
 
   useEffect(() => {
-    fetchBookings();
-  }, [activeTab]);
-
-  useEffect(() => {
-    fetchResources();
+    syncDashboardData();
+    if (!initialDrivers || !initialEquipment) {
+      fetchResources();
+    }
   }, []);
 
-  const fetchBookings = async () => {
+  useEffect(() => {
+    if (initialDrivers) setDrivers(initialDrivers);
+    if (initialEquipment) setVehicles(initialEquipment);
+  }, [initialDrivers, initialEquipment]);
+
+  useEffect(() => {
+    setStatusFilter('all'); // Reset filter when tab changes
+  }, [activeTab]);
+
+  const syncDashboardData = async () => {
     setLoading(true);
     try {
-      let endpoint = '';
-      switch (activeTab) {
-        case 'available': endpoint = '/quotes/available'; break;
-        case 'my-quotes': endpoint = '/quotes/my-quotes'; break;
-        case 'won-jobs': endpoint = '/quotes/won-jobs'; break;
-      }
-      const response = await api.get(endpoint);
-      if (response.data.success) {
-        setBookings(response.data.data);
-      }
+      const [availableRes, myQuotesRes, wonJobsRes] = await Promise.all([
+        api.get('/quotes/available'),
+        api.get('/quotes/my-quotes'),
+        api.get('/quotes/won-jobs')
+      ]);
+
+      setDashboardData({
+        available: availableRes.data.success ? availableRes.data.data : [],
+        'my-quotes': myQuotesRes.data.success ? myQuotesRes.data.data : [],
+        'won-jobs': wonJobsRes.data.success ? wonJobsRes.data.data : []
+      });
     } catch (error) {
-      toast.error('Failed to load bookings');
+      toast.error('Failed to sync load board');
       console.error(error);
     } finally {
       setLoading(false);
@@ -100,7 +135,7 @@ const AvailableBookings = ({ onMessage }: AvailableBookingsProps) => {
       if (response.data.success) {
         toast.success(`Quote submitted for ${selectedBooking.id.split('-')[0]}. Admin will review and match.`);
         setQuoteDialogOpen(false);
-        fetchBookings(); // Refresh list
+        syncDashboardData(); // Refresh all lists
         resetQuoteForm();
       }
     } catch (error: any) {
@@ -115,7 +150,7 @@ const AvailableBookings = ({ onMessage }: AvailableBookingsProps) => {
       const response = await api.patch(`/bookings/${bookingId}/status`, { status: newStatus });
       if (response.data.success) {
         toast.success(`Booking status updated to ${newStatus.replace('_', ' ')}`);
-        fetchBookings();
+        syncDashboardData();
       }
     } catch (error: any) {
       toast.error(error.response?.data?.message || 'Failed to update status');
@@ -163,41 +198,77 @@ const AvailableBookings = ({ onMessage }: AvailableBookingsProps) => {
         </div>
       </div>
 
-      {/* Filter Tabs */}
-      <div className="flex gap-2 p-1 bg-muted rounded-lg w-fit">
-        <Button
-          variant={activeTab === 'available' ? 'secondary' : 'ghost'}
-          size="sm"
-          onClick={() => setActiveTab('available')}
-          className={activeTab === 'available' ? 'bg-primary text-white shadow-sm' : ''}
-        >
-          Available Loads
-        </Button>
-        <Button
-          variant={activeTab === 'my-quotes' ? 'secondary' : 'ghost'}
-          size="sm"
-          onClick={() => setActiveTab('my-quotes')}
-          className={activeTab === 'my-quotes' ? 'bg-primary text-white shadow-sm' : ''}
-        >
-          My Quotes
-        </Button>
-        <Button
-          variant={activeTab === 'won-jobs' ? 'secondary' : 'ghost'}
-          size="sm"
-          onClick={() => setActiveTab('won-jobs')}
-          className={activeTab === 'won-jobs' ? 'bg-primary text-white shadow-sm' : ''}
-        >
-          Won Jobs
-        </Button>
+      {/* Filter Tabs & Sort */}
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div className="flex gap-2 p-1 bg-muted rounded-lg w-fit">
+          <Button
+            variant={activeTab === 'available' ? 'secondary' : 'ghost'}
+            size="sm"
+            onClick={() => setActiveTab('available')}
+            className={activeTab === 'available' ? 'bg-primary text-white shadow-sm' : ''}
+          >
+            Available Loads
+          </Button>
+          <Button
+            variant={activeTab === 'my-quotes' ? 'secondary' : 'ghost'}
+            size="sm"
+            onClick={() => setActiveTab('my-quotes')}
+            className={activeTab === 'my-quotes' ? 'bg-primary text-white shadow-sm' : ''}
+          >
+            My Quotes
+          </Button>
+          <Button
+            variant={activeTab === 'won-jobs' ? 'secondary' : 'ghost'}
+            size="sm"
+            onClick={() => setActiveTab('won-jobs')}
+            className={activeTab === 'won-jobs' ? 'bg-primary text-white shadow-sm' : ''}
+          >
+            Won Jobs
+          </Button>
+        </div>
+
+        <div className="flex items-center gap-2">
+          <Label className="text-xs font-bold text-muted-foreground uppercase whitespace-nowrap">Filter by Status:</Label>
+          <Select value={statusFilter} onValueChange={setStatusFilter}>
+            <SelectTrigger className="w-[160px] h-9 text-xs">
+              <SelectValue placeholder="All Statuses" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">All Statuses</SelectItem>
+              {activeTab === 'available' && (
+                <>
+                  <SelectItem value="pending_quote">Pending Quote</SelectItem>
+                </>
+              )}
+              {activeTab === 'my-quotes' && (
+                <>
+                  <SelectItem value="pending">Pending</SelectItem>
+                  <SelectItem value="accepted">Accepted</SelectItem>
+                  <SelectItem value="rejected">Rejected</SelectItem>
+                  <SelectItem value="expired">Expired</SelectItem>
+                </>
+              )}
+              {activeTab === 'won-jobs' && (
+                <>
+                  <SelectItem value="booked">Booked</SelectItem>
+                  <SelectItem value="awaiting_payment">Awaiting Payment</SelectItem>
+                  <SelectItem value="in_transit">In Transit</SelectItem>
+                  <SelectItem value="delivered">Delivered</SelectItem>
+                  <SelectItem value="completed">Completed</SelectItem>
+                </>
+              )}
+            </SelectContent>
+          </Select>
+        </div>
       </div>
 
       {/* Bookings List */}
       <div className="space-y-4">
-        {loading ? (
+        {loading && dashboardData[activeTab].length === 0 ? (
           <div className="flex flex-col items-center justify-center py-12">
             <Loader size="md" text="Fetching records..." />
           </div>
-        ) : bookings.length === 0 ? (
+        ) : dashboardData[activeTab].length === 0 ? (
           <Card>
             <CardContent className="p-12 text-center">
               <Package className="h-12 w-12 mx-auto text-muted-foreground mb-4 opacity-20" />
@@ -210,100 +281,111 @@ const AvailableBookings = ({ onMessage }: AvailableBookingsProps) => {
             </CardContent>
           </Card>
         ) : (
-          bookings.map((booking) => (
-            <Card key={booking.id} className="hover:border-primary/50 transition-colors border shadow-sm">
-              <CardContent className="p-6">
-                <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4">
-                  <div className="space-y-4 flex-1">
-                    <div className="flex items-center gap-3">
-                      <Badge variant="outline" className="font-mono">{booking.id.split('-')[0]}...</Badge>
-                      <button
-                        onClick={() => handleOpenShipperProfile(booking.shipper_id)}
-                        className="text-sm text-muted-foreground hover:text-primary hover:underline flex items-center gap-1"
-                      >
-                        Shipper: {booking.shipper_name}
-                        <ExternalLink size={12} />
-                      </button>
-                      {booking.requires_escort === 1 && (
-                        <Badge className="bg-orange-500/10 text-orange-600 border-0">Escort Required</Badge>
-                      )}
-                      {activeTab === 'my-quotes' && getStatusBadge(booking.quote_status)}
+          dashboardData[activeTab]
+            .filter((booking) => {
+              if (statusFilter === 'all') return true;
+              const currentStatus = activeTab === 'my-quotes' ? booking.quote_status : booking.status;
+              return currentStatus === statusFilter;
+            })
+            .map((booking) => (
+              <Card key={booking.id} className="hover:border-primary/50 transition-colors border shadow-sm">
+                <CardContent className="p-6">
+                  <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4">
+                    <div className="space-y-4 flex-1">
+                      <div className="flex items-center gap-3">
+                        <Badge variant="outline" className="font-mono">{booking.id.split('-')[0]}...</Badge>
+                        <button
+                          onClick={() => handleOpenShipperProfile(booking.shipper_id)}
+                          className="text-sm text-muted-foreground hover:text-primary hover:underline flex items-center gap-1"
+                        >
+                          Shipper: {booking.shipper_name}
+                          <ExternalLink size={12} />
+                        </button>
+                        {booking.requires_escort === 1 && (
+                          <Badge className="bg-orange-500/10 text-orange-600 border-0">Escort Required</Badge>
+                        )}
+                        {activeTab === 'my-quotes' && getStatusBadge(booking.quote_status)}
+                      </div>
+
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                        <div className="flex items-start gap-2">
+                          <MapPin className="h-5 w-5 text-primary mt-0.5 shrink-0" />
+                          <div>
+                            <p className="text-xs text-muted-foreground uppercase font-bold tracking-wider">Route</p>
+                            <p className="font-medium">{booking.pickup_city}, {booking.pickup_state}</p>
+                            <p className="text-sm text-muted-foreground">to {booking.delivery_city}, {booking.delivery_state}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-start gap-2">
+                          <Calendar className="h-5 w-5 text-primary mt-0.5 shrink-0" />
+                          <div>
+                            <p className="text-xs text-muted-foreground uppercase font-bold tracking-wider">Requested Date</p>
+                            <p className="font-medium">{new Date(booking.shipment_date).toLocaleDateString()}</p>
+                          </div>
+                        </div>
+                        <div className="flex items-start gap-2">
+                          <Package className="h-5 w-5 text-primary mt-0.5 shrink-0" />
+                          <div>
+                            <p className="text-xs text-muted-foreground uppercase font-bold tracking-wider">Cargo</p>
+                            <p className="font-medium">{booking.cargo_type}</p>
+                            <p className="text-sm text-muted-foreground">
+                              {booking.dimensions_length_ft}x{booking.dimensions_width_ft}x{booking.dimensions_height_ft}ft • {Number(booking.weight_lbs).toLocaleString()} {booking.weight_unit || 'lbs'}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                      <div className="flex items-start gap-2">
-                        <MapPin className="h-5 w-5 text-primary mt-0.5 shrink-0" />
-                        <div>
-                          <p className="text-xs text-muted-foreground uppercase font-bold tracking-wider">Route</p>
-                          <p className="font-medium">{booking.pickup_city}, {booking.pickup_state}</p>
-                          <p className="text-sm text-muted-foreground">to {booking.delivery_city}, {booking.delivery_state}</p>
-                        </div>
-                      </div>
-                      <div className="flex items-start gap-2">
-                        <Calendar className="h-5 w-5 text-primary mt-0.5 shrink-0" />
-                        <div>
-                          <p className="text-xs text-muted-foreground uppercase font-bold tracking-wider">Requested Date</p>
-                          <p className="font-medium">{new Date(booking.shipment_date).toLocaleDateString()}</p>
-                        </div>
-                      </div>
-                      <div className="flex items-start gap-2">
-                        <Package className="h-5 w-5 text-primary mt-0.5 shrink-0" />
-                        <div>
-                          <p className="text-xs text-muted-foreground uppercase font-bold tracking-wider">Cargo</p>
-                          <p className="font-medium">{booking.cargo_type}</p>
-                          <p className="text-sm text-muted-foreground">
-                            {booking.dimensions_length_ft}x{booking.dimensions_width_ft}x{booking.dimensions_height_ft}ft • {Number(booking.weight_lbs).toLocaleString()} lbs
-                          </p>
-                        </div>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="flex flex-row lg:flex-col gap-2 shrink-0">
-                    <Button variant="ghost" onClick={() => openDetailsDialog(booking)}>
-                      <FileText className="h-4 w-4 mr-2" />
-                      Details
-                    </Button>
-                    {activeTab === 'available' ? (
-                      <Button
-                        onClick={() => openQuoteDialog(booking)}
-                      >
-                        <Send className="h-4 w-4 mr-2" />
-                        Quote
+                    <div className="flex flex-row lg:flex-col gap-2 shrink-0">
+                      <Button variant="ghost" onClick={() => openDetailsDialog(booking)}>
+                        <FileText className="h-4 w-4 mr-2" />
+                        Details
                       </Button>
-                    ) : activeTab === 'my-quotes' ? (
-                      <div className="text-right">
-                        <p className="text-xs text-muted-foreground font-bold uppercase">Your Bid</p>
-                        <p className="text-xl font-bold text-primary">${Number(booking.amount).toLocaleString()}</p>
-                      </div>
-                    ) : (
-                      <div className="text-right space-y-2">
-                        <div>
-                          <p className="text-xs text-muted-foreground font-bold uppercase">Accepted Price</p>
-                          <p className="text-xl font-bold text-green-600">${Number(booking.agreed_price).toLocaleString()}</p>
+                      {activeTab === 'available' ? (
+                        <Button
+                          onClick={() => openQuoteDialog(booking)}
+                        >
+                          <Send className="h-4 w-4 mr-2" />
+                          Quote
+                        </Button>
+                      ) : activeTab === 'my-quotes' ? (
+                        <div className="text-right">
+                          <p className="text-xs text-muted-foreground font-bold uppercase">Your Bid</p>
+                          <p className="text-xl font-bold text-primary">${Number(booking.amount).toLocaleString()}</p>
                         </div>
-                        <div className="flex flex-col gap-2">
-                          <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 justify-center h-8 uppercase text-[10px] font-bold tracking-widest">
-                            {booking.status.replace('_', ' ')}
-                          </Badge>
-                          {onMessage && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="w-[140px] h-8 text-xs gap-1"
-                              onClick={() => onMessage(booking.id, booking.shipper_id)}
-                            >
-                              <MessageSquare size={14} /> Chat Shipper
-                            </Button>
-                          )}
+                      ) : (
+                        <div className="text-right space-y-2">
+                          <div>
+                            <p className="text-xs text-muted-foreground font-bold uppercase">Accepted Price</p>
+                            <p className="text-xl font-bold text-green-600">${Number(booking.agreed_price).toLocaleString()}</p>
+                            {booking.driver_name && (
+                              <p className="text-[10px] text-muted-foreground mt-1 bg-muted/50 p-1 rounded border flex items-center justify-end gap-1">
+                                <User size={10} /> Driver: {booking.driver_name}
+                              </p>
+                            )}
+                          </div>
+                          <div className="flex flex-col gap-2">
+                            <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 justify-center h-8 uppercase text-[10px] font-bold tracking-widest">
+                              {booking.status.replace('_', ' ')}
+                            </Badge>
+                            {onMessage && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                className="w-[140px] h-8 text-xs gap-1"
+                                onClick={() => onMessage(booking.id, booking.shipper_id)}
+                              >
+                                <MessageSquare size={14} /> Chat Shipper
+                              </Button>
+                            )}
+                          </div>
                         </div>
-                      </div>
-                    )}
+                      )}
+                    </div>
                   </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))
+                </CardContent>
+              </Card>
+            ))
         )}
       </div>
 
@@ -322,7 +404,7 @@ const AvailableBookings = ({ onMessage }: AvailableBookingsProps) => {
             <div className="p-4 bg-muted/50 rounded-lg space-y-2 border">
               <p className="text-sm flex justify-between"><span><strong>Route:</strong></span> <span>{selectedBooking?.pickup_city} → {selectedBooking?.delivery_city}</span></p>
               <p className="text-sm flex justify-between"><span><strong>Cargo:</strong></span> <span>{selectedBooking?.cargo_type}</span></p>
-              <p className="text-sm flex justify-between"><span><strong>Weight:</strong></span> <span>{Number(selectedBooking?.weight_lbs).toLocaleString()} lbs</span></p>
+              <p className="text-sm flex justify-between"><span><strong>Weight:</strong></span> <span>{Number(selectedBooking?.weight_lbs).toLocaleString()} {selectedBooking?.weight_unit || 'lbs'}</span></p>
             </div>
 
             <div className="space-y-2">

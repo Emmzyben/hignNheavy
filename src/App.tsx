@@ -27,6 +27,9 @@ import DriverCompleteDelivery from "./pages/dashboard/DriverCompleteDelivery";
 import EscortJobDetail from "./pages/dashboard/EscortJobDetail";
 import CarrierShipmentDetail from "./pages/dashboard/CarrierShipmentDetail";
 import AdminBookingDetail from "./pages/dashboard/AdminBookingDetail";
+import PrivacyPolicy from "./pages/PrivacyPolicy";
+import TermsOfService from "./pages/TermsOfService";
+
 
 import ProtectedRoute from "./components/ProtectedRoute";
 
@@ -50,6 +53,9 @@ const App = () => (
           <Route path="/verify-email" element={<VerifyEmail />} />
           <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/verification-pending" element={<VerificationPending />} />
+          <Route path="/privacy-policy" element={<PrivacyPolicy />} />
+          <Route path="/terms-of-service" element={<TermsOfService />} />
+
 
           <Route
             path="/dashboard/profile"

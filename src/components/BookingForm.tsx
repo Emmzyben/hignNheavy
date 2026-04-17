@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Button } from "./ui/button";
 import { Input } from "./ui/input";
@@ -7,9 +7,27 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { Textarea } from "./ui/textarea";
 import { Checkbox } from "./ui/checkbox";
 import { toast } from "sonner";
+import api from "@/lib/api";
+import { locations, states } from "@/lib/locations";
 
 const BookingForm = () => {
   const navigate = useNavigate();
+  const [cargoTypes, setCargoTypes] = useState<{ id: number, name: string }[]>([]);
+
+  useEffect(() => {
+    const fetchCargoTypes = async () => {
+      try {
+        const response = await api.get("/cargo-types");
+        if (response.data.success) {
+          setCargoTypes(response.data.data);
+        }
+      } catch (error) {
+        console.error("Failed to fetch cargo types:", error);
+      }
+    };
+    fetchCargoTypes();
+  }, []);
+
   const [formData, setFormData] = useState({
     pickupAddress: "",
     pickupCity: "",
@@ -28,6 +46,25 @@ const BookingForm = () => {
     requiresEscort: false,
     specialInstructions: "",
   });
+
+  const [pickupCities, setPickupCities] = useState<string[]>([]);
+  const [deliveryCities, setDeliveryCities] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (formData.pickupState) {
+      setPickupCities(locations[formData.pickupState] || []);
+    } else {
+      setPickupCities([]);
+    }
+  }, [formData.pickupState]);
+
+  useEffect(() => {
+    if (formData.deliveryState) {
+      setDeliveryCities(locations[formData.deliveryState] || []);
+    } else {
+      setDeliveryCities([]);
+    }
+  }, [formData.deliveryState]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -54,29 +91,34 @@ const BookingForm = () => {
           </div>
           <div>
             <Label htmlFor="pickupCity">City</Label>
-            <Input
-              id="pickupCity"
-              placeholder="Houston"
+            <Select
               value={formData.pickupCity}
-              onChange={(e) => setFormData({ ...formData, pickupCity: e.target.value })}
-              required
-            />
+              onValueChange={(value) => setFormData({ ...formData, pickupCity: value })}
+              disabled={!formData.pickupState}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder={formData.pickupState ? "Select city" : "Select state"} />
+              </SelectTrigger>
+              <SelectContent className="max-h-[200px]">
+                {pickupCities.map((city) => (
+                  <SelectItem key={city} value={city}>{city}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <div>
             <Label htmlFor="pickupState">State</Label>
             <Select
               value={formData.pickupState}
-              onValueChange={(value) => setFormData({ ...formData, pickupState: value })}
+              onValueChange={(value) => setFormData({ ...formData, pickupState: value, pickupCity: "" })}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Select state" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="TX">Texas</SelectItem>
-                <SelectItem value="OK">Oklahoma</SelectItem>
-                <SelectItem value="NM">New Mexico</SelectItem>
-                <SelectItem value="LA">Louisiana</SelectItem>
-                <SelectItem value="AR">Arkansas</SelectItem>
+                {states.map((state) => (
+                  <SelectItem key={state} value={state}>{state}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
@@ -99,29 +141,34 @@ const BookingForm = () => {
           </div>
           <div>
             <Label htmlFor="deliveryCity">City</Label>
-            <Input
-              id="deliveryCity"
-              placeholder="Dallas"
+            <Select
               value={formData.deliveryCity}
-              onChange={(e) => setFormData({ ...formData, deliveryCity: e.target.value })}
-              required
-            />
+              onValueChange={(value) => setFormData({ ...formData, deliveryCity: value })}
+              disabled={!formData.deliveryState}
+            >
+              <SelectTrigger>
+                <SelectValue placeholder={formData.deliveryState ? "Select city" : "Select state"} />
+              </SelectTrigger>
+              <SelectContent className="max-h-[200px]">
+                {deliveryCities.map((city) => (
+                  <SelectItem key={city} value={city}>{city}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           <div>
             <Label htmlFor="deliveryState">State</Label>
             <Select
               value={formData.deliveryState}
-              onValueChange={(value) => setFormData({ ...formData, deliveryState: value })}
+              onValueChange={(value) => setFormData({ ...formData, deliveryState: value, deliveryCity: "" })}
             >
               <SelectTrigger>
                 <SelectValue placeholder="Select state" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="TX">Texas</SelectItem>
-                <SelectItem value="OK">Oklahoma</SelectItem>
-                <SelectItem value="NM">New Mexico</SelectItem>
-                <SelectItem value="LA">Louisiana</SelectItem>
-                <SelectItem value="AR">Arkansas</SelectItem>
+                {states.map((state) => (
+                  <SelectItem key={state} value={state}>{state}</SelectItem>
+                ))}
               </SelectContent>
             </Select>
           </div>
@@ -142,13 +189,22 @@ const BookingForm = () => {
                 <SelectValue placeholder="Select cargo type" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="construction">Construction Equipment</SelectItem>
-                <SelectItem value="industrial">Industrial Machinery</SelectItem>
-                <SelectItem value="agricultural">Agricultural Equipment</SelectItem>
-                <SelectItem value="prefab">Pre-Fab Buildings/Modules</SelectItem>
-                <SelectItem value="wind">Wind Energy Components</SelectItem>
-                <SelectItem value="mining">Mining Equipment</SelectItem>
-                <SelectItem value="other">Other</SelectItem>
+                {cargoTypes.map((type) => (
+                  <SelectItem key={type.id} value={type.name}>
+                    {type.name}
+                  </SelectItem>
+                ))}
+                {cargoTypes.length === 0 && (
+                  <>
+                    <SelectItem value="Construction Equipment">Construction Equipment</SelectItem>
+                    <SelectItem value="Industrial Machinery">Industrial Machinery</SelectItem>
+                    <SelectItem value="Agricultural Equipment">Agricultural Equipment</SelectItem>
+                    <SelectItem value="Pre-Fab Buildings/Modules">Pre-Fab Buildings/Modules</SelectItem>
+                    <SelectItem value="Wind Energy Components">Wind Energy Components</SelectItem>
+                    <SelectItem value="Mining Equipment">Mining Equipment</SelectItem>
+                    <SelectItem value="Other">Other</SelectItem>
+                  </>
+                )}
               </SelectContent>
             </Select>
           </div>

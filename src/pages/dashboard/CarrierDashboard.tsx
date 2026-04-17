@@ -9,6 +9,7 @@ import CarrierWallet from '@/components/dashboard/carrier/CarrierWallet';
 import MessagingSection from '@/components/dashboard/MessagingSection';
 import ProviderReviews from '@/components/dashboard/ProviderReviews';
 import DashboardLayout from '@/components/dashboard/DashboardLayout';
+import api from '@/lib/api';
 
 type TabType = 'bookings' | 'drivers' | 'equipment' | 'wallet' | 'messages' | 'reviews';
 
@@ -18,6 +19,29 @@ const CarrierDashboard = () => {
     (searchParams.get("section") as TabType) || 'bookings'
   );
   const [chatContext, setChatContext] = useState<{ bookingId: string | null; participantId: string } | null>(null);
+  const [drivers, setDrivers] = useState<any[]>([]);
+  const [equipment, setEquipment] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    fetchDashboardResources();
+  }, []);
+
+  const fetchDashboardResources = async () => {
+    setLoading(true);
+    try {
+      const [driversRes, equipmentRes] = await Promise.all([
+        api.get('/drivers'),
+        api.get('/vehicles')
+      ]);
+      if (driversRes.data.success) setDrivers(driversRes.data.data);
+      if (equipmentRes.data.success) setEquipment(equipmentRes.data.data);
+    } catch (error) {
+      console.error('Error fetching dashboard resources:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   useEffect(() => {
     const section = searchParams.get("section");
@@ -40,11 +64,21 @@ const CarrierDashboard = () => {
   const renderContent = () => {
     switch (activeTab) {
       case 'bookings':
-        return <AvailableBookings onMessage={handleStartChat} />;
+        return <AvailableBookings 
+          onMessage={handleStartChat} 
+          initialDrivers={drivers} 
+          initialEquipment={equipment} 
+        />;
       case 'drivers':
-        return <DriversManagement />;
+        return <DriversManagement 
+          initialDrivers={drivers} 
+          onRefresh={fetchDashboardResources} 
+        />;
       case 'equipment':
-        return <EquipmentManagement />;
+        return <EquipmentManagement 
+          initialEquipment={equipment} 
+          onRefresh={fetchDashboardResources} 
+        />;
 
 
       case 'wallet':
@@ -57,7 +91,11 @@ const CarrierDashboard = () => {
       case 'reviews':
         return <ProviderReviews />;
       default:
-        return <AvailableBookings onMessage={handleStartChat} />;
+        return <AvailableBookings 
+          onMessage={handleStartChat} 
+          initialDrivers={drivers} 
+          initialEquipment={equipment} 
+        />;
     }
   };
 
