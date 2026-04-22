@@ -21,8 +21,7 @@ export default function VerificationPending() {
                     shipper: '/dashboard/shipper',
                     carrier: '/dashboard/carrier',
                     escort: '/dashboard/escort',
-                    admin: '/dashboard/admin',
-                    driver: '/dashboard/driver'
+                    admin: '/dashboard/admin'
                 }[user.role] || '/';
                 navigate(dashboardRoute, { replace: true });
             } else {

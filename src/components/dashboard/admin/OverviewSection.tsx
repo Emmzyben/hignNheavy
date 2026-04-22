@@ -10,6 +10,8 @@ import {
 import ProviderProfileDialog from "./ProviderProfileDialog";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter, DialogDescription } from "@/components/ui/dialog";
 import api from "@/lib/api";
 import { toast } from "sonner";
@@ -34,6 +36,7 @@ const OverviewSection = ({ setActiveSection }: OverviewSectionProps) => {
     const [viewProviderId, setViewProviderId] = useState<string | null>(null);
     const [profileDialogOpen, setProfileDialogOpen] = useState(false);
     const [walletStats, setWalletStats] = useState({ balance: 0, pending: 0 });
+    const [markupValue, setMarkupValue] = useState<string>("");
 
     const fetchWalletStats = async () => {
         try {
@@ -71,6 +74,7 @@ const OverviewSection = ({ setActiveSection }: OverviewSectionProps) => {
         setLoadingQuotes(true);
         setSelectedCarrierQuote("");
         setSelectedEscortQuote("");
+        setMarkupValue("");
         try {
             const response = await api.get(`/quotes/booking/${booking.id}`);
             if (response.data.success) {
@@ -94,7 +98,8 @@ const OverviewSection = ({ setActiveSection }: OverviewSectionProps) => {
             const response = await api.post("/admin/assign-providers", {
                 booking_id: selectedBooking.id,
                 carrier_quote_id: selectedCarrierQuote,
-                escort_quote_id: selectedEscortQuote || null
+                escort_quote_id: selectedEscortQuote || null,
+                markup_value: markupValue || null
             });
 
             if (response.data.success) {
@@ -384,12 +389,46 @@ const OverviewSection = ({ setActiveSection }: OverviewSectionProps) => {
                                         </div>
                                     </div>
                                 )}
+
+                                {/* Markup Override */}
+                                <div className="bg-primary/5 p-4 rounded-xl border border-primary/20 space-y-3">
+                                    <div className="flex items-center gap-2">
+                                        <TrendingUp className="h-4 w-4 text-primary" />
+                                        <Label className="text-xs font-black uppercase tracking-widest text-primary">Percentage Markup Override</Label>
+                                    </div>
+                                    <div className="flex items-center gap-3">
+                                        <div className="relative w-32">
+                                            <Input
+                                                type="number"
+                                                placeholder="15"
+                                                value={markupValue}
+                                                onChange={(e) => setMarkupValue(e.target.value)}
+                                                className="h-10 font-bold pr-8"
+                                            />
+                                            <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm font-bold text-muted-foreground">%</span>
+                                        </div>
+                                        <p className="text-[10px] text-muted-foreground leading-tight italic">
+                                            Leave empty to use the system default markup. This value overrides the global settings for this specific assignment.
+                                        </p>
+                                    </div>
+                                </div>
                             </>
                         )}
                     </div>
 
-                    <DialogFooter className="p-6 border-t bg-muted/10">
-                        <Button variant="outline" onClick={() => setDetailsOpen(false)} disabled={isAssigning}>Cancel</Button>
+                    <DialogFooter className="p-6 border-t bg-muted/10 flex items-center justify-between">
+                        <div className="text-left">
+                            <p className="text-[10px] font-black uppercase text-muted-foreground opacity-70">Estimated Shipper Total ({markupValue || 15}%)</p>
+                            <p className="text-lg font-black text-primary">
+                                ${(
+                                    ((selectedCarrierQuote ? parseFloat(quotes.find(q => q.id === selectedCarrierQuote)?.amount || 0) : 0) +
+                                    (selectedEscortQuote ? parseFloat(quotes.find(q => q.id === selectedEscortQuote)?.amount || 0) : 0)) * 
+                                    (1 + (parseFloat(markupValue || "15") / 100))
+                                ).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                            </p>
+                        </div>
+                        <div className="flex gap-3">
+                            <Button variant="outline" onClick={() => setDetailsOpen(false)} disabled={isAssigning}>Cancel</Button>
                         <Button
                             className="hero-gradient border-0 font-bold"
                             onClick={handleAssign}
@@ -398,6 +437,7 @@ const OverviewSection = ({ setActiveSection }: OverviewSectionProps) => {
                             {isAssigning ? <Loader size="sm" text="" /> : <CheckCircle2 className="mr-2 h-4 w-4" />}
                             Confirm Selection
                         </Button>
+                        </div>
                     </DialogFooter>
                 </DialogContent>
             </Dialog>

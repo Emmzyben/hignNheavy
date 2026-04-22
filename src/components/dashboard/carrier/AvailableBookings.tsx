@@ -288,99 +288,86 @@ const AvailableBookings = ({ onMessage, initialDrivers, initialEquipment }: Avai
               return currentStatus === statusFilter;
             })
             .map((booking) => (
-              <Card key={booking.id} className="hover:border-primary/50 transition-colors border shadow-sm">
-                <CardContent className="p-6">
-                  <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-4">
-                    <div className="space-y-4 flex-1">
-                      <div className="flex items-center gap-3">
-                        <Badge variant="outline" className="font-mono">{booking.id.split('-')[0]}...</Badge>
+              <Card key={booking.id} className="hover:border-primary/40 transition-all border border-border/60 shadow-sm rounded-2xl overflow-hidden group">
+                <CardContent className="p-8">
+                  <div className="flex flex-col lg:flex-row lg:items-start justify-between gap-8">
+                    <div className="space-y-6 flex-1">
+                      <div className="flex flex-wrap items-center gap-3">
+                        <Badge variant="outline" className="font-black text-[10px] tracking-widest px-2 py-0.5 bg-muted/30 border-border/40">#{booking.id.split('-')[0]}</Badge>
                         <button
                           onClick={() => handleOpenShipperProfile(booking.shipper_id)}
-                          className="text-sm text-muted-foreground hover:text-primary hover:underline flex items-center gap-1"
+                          className="text-xs text-muted-foreground font-bold hover:text-primary transition-colors flex items-center gap-1.5 uppercase tracking-tighter"
                         >
                           Shipper: {booking.shipper_name}
-                          <ExternalLink size={12} />
+                          <ExternalLink size={10} />
                         </button>
                         {booking.requires_escort === 1 && (
-                          <Badge className="bg-orange-500/10 text-orange-600 border-0">Escort Required</Badge>
+                          <Badge className="bg-orange-500/10 text-orange-600 border-0 text-[10px] font-black uppercase tracking-widest">Escort Required</Badge>
                         )}
                         {activeTab === 'my-quotes' && getStatusBadge(booking.quote_status)}
                       </div>
 
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                        <div className="flex items-start gap-2">
-                          <MapPin className="h-5 w-5 text-primary mt-0.5 shrink-0" />
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                        <div className="space-y-1.5">
+                          <p className="text-[9px] text-muted-foreground uppercase font-black tracking-[0.2em]">Route</p>
                           <div>
-                            <p className="text-xs text-muted-foreground uppercase font-bold tracking-wider">Route</p>
-                            <p className="font-medium">{booking.pickup_city}, {booking.pickup_state}</p>
-                            <p className="text-sm text-muted-foreground">to {booking.delivery_city}, {booking.delivery_state}</p>
+                            <p className="font-bold text-base text-foreground">{booking.pickup_city}, {booking.pickup_state}</p>
+                            <p className="text-xs text-muted-foreground font-medium">to {booking.delivery_city}, {booking.delivery_state}</p>
                           </div>
                         </div>
-                        <div className="flex items-start gap-2">
-                          <Calendar className="h-5 w-5 text-primary mt-0.5 shrink-0" />
-                          <div>
-                            <p className="text-xs text-muted-foreground uppercase font-bold tracking-wider">Requested Date</p>
-                            <p className="font-medium">{new Date(booking.shipment_date).toLocaleDateString()}</p>
-                          </div>
+                        <div className="space-y-1.5">
+                          <p className="text-[9px] text-muted-foreground uppercase font-black tracking-[0.2em]">Shipment Date</p>
+                          <p className="font-bold text-base text-foreground">{new Date(booking.shipment_date).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}</p>
                         </div>
-                        <div className="flex items-start gap-2">
-                          <Package className="h-5 w-5 text-primary mt-0.5 shrink-0" />
+                        <div className="space-y-1.5">
+                          <p className="text-[9px] text-muted-foreground uppercase font-black tracking-[0.2em]">Cargo Type</p>
                           <div>
-                            <p className="text-xs text-muted-foreground uppercase font-bold tracking-wider">Cargo</p>
-                            <p className="font-medium">{booking.cargo_type}</p>
-                            <p className="text-sm text-muted-foreground">
-                              {booking.dimensions_length_ft}x{booking.dimensions_width_ft}x{booking.dimensions_height_ft}ft • {Number(booking.weight_lbs).toLocaleString()} {booking.weight_unit || 'lbs'}
+                            <p className="font-bold text-base text-foreground">{booking.cargo_type}</p>
+                            <p className="text-[10px] text-muted-foreground font-medium uppercase tracking-tighter">
+                              {booking.dimensions_length_ft}'×{booking.dimensions_width_ft}'×{booking.dimensions_height_ft}' • {Number(booking.weight_lbs).toLocaleString()} {booking.weight_unit || 'lbs'}
                             </p>
                           </div>
                         </div>
                       </div>
                     </div>
 
-                    <div className="flex flex-row lg:flex-col gap-2 shrink-0">
-                      <Button variant="ghost" onClick={() => openDetailsDialog(booking)}>
-                        <FileText className="h-4 w-4 mr-2" />
-                        Details
-                      </Button>
-                      {activeTab === 'available' ? (
-                        <Button
-                          onClick={() => openQuoteDialog(booking)}
-                        >
-                          <Send className="h-4 w-4 mr-2" />
-                          Quote
+                    <div className="flex flex-row lg:flex-col gap-3 shrink-0 items-center lg:items-end justify-between lg:justify-start pt-4 lg:pt-0 border-t lg:border-0 border-border/40">
+                      <div className="lg:text-right">
+                        {activeTab === 'available' ? (
+                          <div className="space-y-1">
+                            <p className="text-[9px] text-muted-foreground uppercase font-black tracking-widest">Action Required</p>
+                            <Button onClick={() => openQuoteDialog(booking)} className="rounded-xl px-5 h-9 font-bold text-xs">
+                              Submit Quote
+                            </Button>
+                          </div>
+                        ) : activeTab === 'my-quotes' ? (
+                          <div className="space-y-0.5">
+                            <p className="text-[9px] text-muted-foreground uppercase font-black tracking-widest">Your Bid</p>
+                            <p className="text-xl font-black text-primary">${Number(booking.amount).toLocaleString()}</p>
+                          </div>
+                        ) : (
+                          <div className="space-y-0.5">
+                            <p className="text-[9px] text-muted-foreground uppercase font-black tracking-widest">Agreed Price</p>
+                            <p className="text-xl font-black text-green-600">${Number(booking.agreed_price).toLocaleString()}</p>
+                          </div>
+                        )}
+                      </div>
+                      
+                      <div className="flex flex-col gap-2">
+                        <Button variant="ghost" size="sm" onClick={() => openDetailsDialog(booking)} className="text-xs font-bold hover:bg-primary/5 hover:text-primary rounded-lg h-9">
+                          View Details
                         </Button>
-                      ) : activeTab === 'my-quotes' ? (
-                        <div className="text-right">
-                          <p className="text-xs text-muted-foreground font-bold uppercase">Your Bid</p>
-                          <p className="text-xl font-bold text-primary">${Number(booking.amount).toLocaleString()}</p>
-                        </div>
-                      ) : (
-                        <div className="text-right space-y-2">
-                          <div>
-                            <p className="text-xs text-muted-foreground font-bold uppercase">Accepted Price</p>
-                            <p className="text-xl font-bold text-green-600">${Number(booking.agreed_price).toLocaleString()}</p>
-                            {booking.driver_name && (
-                              <p className="text-[10px] text-muted-foreground mt-1 bg-muted/50 p-1 rounded border flex items-center justify-end gap-1">
-                                <User size={10} /> Driver: {booking.driver_name}
-                              </p>
-                            )}
-                          </div>
-                          <div className="flex flex-col gap-2">
-                            <Badge variant="outline" className="bg-green-50 text-green-700 border-green-200 justify-center h-8 uppercase text-[10px] font-bold tracking-widest">
-                              {booking.status.replace('_', ' ')}
-                            </Badge>
-                            {onMessage && (
-                              <Button
-                                variant="outline"
-                                size="sm"
-                                className="w-[140px] h-8 text-xs gap-1"
-                                onClick={() => onMessage(booking.id, booking.shipper_id)}
-                              >
-                                <MessageSquare size={14} /> Chat Shipper
-                              </Button>
-                            )}
-                          </div>
-                        </div>
-                      )}
+                        {activeTab === 'won-jobs' && onMessage && (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="text-xs font-bold gap-2 rounded-lg h-9"
+                            onClick={() => onMessage(booking.id, booking.shipper_id)}
+                          >
+                            <MessageSquare size={14} /> Chat
+                          </Button>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </CardContent>

@@ -21,9 +21,6 @@ import Notifications from "./pages/dashboard/Notifications";
 import VerifyEmail from "./pages/VerifyEmail";
 import ResetPassword from "./pages/ResetPassword";
 import VerificationPending from "./pages/VerificationPending";
-import DriverDashboard from "./pages/dashboard/DriverDashboard";
-import DriverRequestDetail from "./pages/dashboard/DriverRequestDetail";
-import DriverCompleteDelivery from "./pages/dashboard/DriverCompleteDelivery";
 import EscortJobDetail from "./pages/dashboard/EscortJobDetail";
 import CarrierShipmentDetail from "./pages/dashboard/CarrierShipmentDetail";
 import AdminBookingDetail from "./pages/dashboard/AdminBookingDetail";
@@ -115,30 +112,7 @@ const App = () => (
               </ProtectedRoute>
             }
           />
-          <Route
-            path="/dashboard/driver"
-            element={
-              <ProtectedRoute allowedRoles={['driver']}>
-                <DriverDashboard />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/dashboard/driver/request/:id"
-            element={
-              <ProtectedRoute allowedRoles={['driver']}>
-                <DriverRequestDetail />
-              </ProtectedRoute>
-            }
-          />
-          <Route
-            path="/dashboard/driver/complete-delivery"
-            element={
-              <ProtectedRoute allowedRoles={['driver']}>
-                <DriverCompleteDelivery />
-              </ProtectedRoute>
-            }
-          />
+
           <Route
             path="/dashboard/admin"
             element={

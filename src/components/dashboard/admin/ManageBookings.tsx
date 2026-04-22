@@ -31,6 +31,7 @@ const statusConfig: Record<string, { label: string; color: string }> = {
   "delivered": { label: "Delivered", color: "bg-teal-100 text-teal-800" },
   "completed": { label: "Completed", color: "bg-gray-100 text-gray-800" },
   "cancelled": { label: "Cancelled", color: "bg-red-100 text-red-800" },
+  "awaiting_payment": { label: "Awaiting Payment", color: "bg-yellow-100 text-yellow-800" },
 };
 
 const ManageBookings = () => {
@@ -162,7 +163,7 @@ const ManageBookings = () => {
                           value={booking.status}
                           onValueChange={(val) => handleUpdateStatus(booking.id, val)}
                         >
-                          <SelectTrigger className="w-[130px] h-8 text-xs">
+                          <SelectTrigger className="w-[130px] h-8 text-xs ">
                             <SelectValue placeholder="Status" />
                           </SelectTrigger>
                           <SelectContent>

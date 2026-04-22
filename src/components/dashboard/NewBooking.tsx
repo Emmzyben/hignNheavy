@@ -205,41 +205,47 @@ const NewBooking = ({ initialData, onSuccess, onCancel }: NewBookingProps) => {
   };
 
   return (
-    <div className="max-w-4xl mx-auto">
+    <div className="max-w-4xl mx-auto px-4 md:px-0">
       {/* Progress Steps */}
-      <div className="mb-8">
-        <div className="flex items-center justify-between">
+      <div className="mb-10 px-2 md:px-0">
+        <div className="flex items-center justify-between w-full">
           {steps.map((step, index) => (
-            <div key={index} className="flex items-center">
-              <div className="flex flex-col items-center">
+            <div key={index} className="flex items-center flex-1 last:flex-none">
+              <div className="flex flex-col items-center relative">
                 <div
-                  className={`w-10 h-10 rounded-full flex items-center justify-center font-semibold transition-colors ${index < currentStep
+                  className={`w-8 h-8 md:w-10 md:h-10 rounded-full flex items-center justify-center font-bold text-xs md:text-sm transition-all duration-300 shadow-sm ${index < currentStep
                     ? "bg-primary text-primary-foreground"
                     : index === currentStep
-                      ? "bg-primary text-primary-foreground"
+                      ? "bg-primary text-primary-foreground ring-4 ring-primary/20 scale-110"
                       : "bg-muted text-muted-foreground"
                     }`}
                 >
-                  {index < currentStep ? <Check size={20} /> : index + 1}
+                  {index < currentStep ? <Check size={14} className="md:w-[18px] md:h-[18px]" /> : index + 1}
                 </div>
-                <div className="mt-2 text-center">
-                  <p className="text-sm font-semibold">{step.title}</p>
-                  <p className="text-xs text-muted-foreground">{step.description}</p>
+                <div className="mt-3 text-center absolute top-full left-1/2 -translate-x-1/2 w-max max-w-[60px] md:max-w-none">
+                  <p className={`text-[9px] md:text-sm font-bold uppercase tracking-tight transition-colors ${index === currentStep ? 'text-primary' : 'text-muted-foreground'}`}>
+                    {step.title}
+                  </p>
+                  <p className="hidden md:block text-[10px] text-muted-foreground font-medium">{step.description}</p>
                 </div>
               </div>
               {index < steps.length - 1 && (
-                <div
-                  className={`w-20 md:w-32 h-1 mx-2 ${index < currentStep ? "bg-primary" : "bg-muted"
-                    }`}
-                />
+                <div className="flex-1 mx-1 md:mx-4">
+                  <div
+                    className={`h-0.5 md:h-1 rounded-full transition-all duration-500 ${index < currentStep ? "bg-primary shadow-sm shadow-primary/20" : "bg-muted"
+                      }`}
+                  />
+                </div>
               )}
             </div>
           ))}
         </div>
+        {/* Extra spacer for the absolute positioned labels below */}
+        <div className="h-10 md:h-12" />
       </div>
 
       {/* Form */}
-      <div className="bg-card rounded-xl border border-border p-8">
+      <div className="bg-card rounded-2xl md:rounded-3xl border border-border/60 p-5 md:p-10 shadow-xl shadow-black/[0.03]">
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             {/* Step 1: Locations */}
@@ -619,92 +625,102 @@ const NewBooking = ({ initialData, onSuccess, onCancel }: NewBookingProps) => {
 
             {/* Step 4: Review */}
             {currentStep === 3 && (
-              <div className="space-y-6">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-primary/10 rounded-lg">
-                    <FileText className="w-5 h-5 text-primary" />
-                  </div>
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <h2 className="text-xl font-display font-bold leading-tight">Booking Summary</h2>
-                      {(() => {
-                        const l = parseFloat(values.length) || 0;
-                        const w = parseFloat(values.width) || 0;
-                        const h = parseFloat(values.height) || 0;
-                        const wt = parseFloat(values.weight) || 0;
-                        const state = values.pickupState || values.deliveryState || "Texas";
-                        const isOversize = w > 8.5 || h > (state === "Oklahoma" ? 13.5 : 14) || l > 65 || wt > 80000;
-                        return isOversize ? <Badge className="bg-red-100 text-red-700 border-red-200">OVERSIZE LOAD</Badge> : null;
-                      })()}
+              <div className="space-y-10 py-4">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 pb-2">
+                  <div className="flex items-center gap-4">
+                    <div className="p-3 bg-primary/10 rounded-2xl shadow-sm border border-primary/20">
+                      <FileText className="w-6 h-6 text-primary" />
                     </div>
-                    <p className="text-sm text-muted-foreground">Review all details carefully before submitting your request</p>
+                    <div>
+                      <div className="flex items-center gap-3 mb-1">
+                        <h2 className="text-2xl font-display font-black leading-tight tracking-tight">Booking Summary</h2>
+                        {(() => {
+                          const l = parseFloat(values.length) || 0;
+                          const w = parseFloat(values.width) || 0;
+                          const h = parseFloat(values.height) || 0;
+                          const wt = parseFloat(values.weight) || 0;
+                          const state = values.pickupState || values.deliveryState || "Texas";
+                          const isOversize = w > 8.5 || h > (state === "Oklahoma" ? 13.5 : 14) || l > 65 || wt > 80000;
+                          return isOversize ? <Badge className="bg-red-500 text-white border-transparent px-3 py-1 text-[10px] font-black uppercase tracking-widest animate-pulse shadow-lg shadow-red-200">OVERSIZE LOAD</Badge> : null;
+                        })()}
+                      </div>
+                      <p className="text-sm text-muted-foreground font-medium">Verify your shipment details before proceeding to confirmation</p>
+                    </div>
                   </div>
                 </div>
 
                 {/* Route */}
-                <div className="bg-card border border-border rounded-xl overflow-hidden">
-                  <div className="flex items-center gap-2 px-5 py-3 bg-muted/40 border-b border-border">
-                    <MapPin className="w-4 h-4 text-primary" />
-                    <span className="text-xs font-black uppercase tracking-widest text-muted-foreground">Route Details</span>
-                  </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-border">
-                    <div className="p-5 space-y-1">
-                      <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Pickup Location</p>
-                      <p className="font-semibold text-foreground">{values.pickupAddress}</p>
-                      <p className="text-sm text-muted-foreground">{values.pickupCity}, {values.pickupState}</p>
+                <div className="bg-card border border-border/60 rounded-3xl overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+                  <div className="flex items-center justify-between px-6 md:px-8 py-4 bg-muted/30 border-b border-border/40">
+                    <div className="flex items-center gap-3">
+                      <MapPin className="w-5 h-5 text-primary" />
+                      <span className="text-xs font-black uppercase tracking-[0.2em] text-muted-foreground">Route Overview</span>
                     </div>
-                    <div className="p-5 space-y-1 relative">
-                      <div className="hidden md:flex absolute -left-4 top-1/2 -translate-y-1/2 w-8 h-8 bg-primary rounded-full items-center justify-center z-10 shadow-lg shadow-primary/30">
-                        <ChevronRight className="w-4 h-4 text-white" />
+                    <Badge variant="outline" className="bg-white/50 backdrop-blur-sm text-[10px] font-bold border-border/50">STEP 1</Badge>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 divide-y md:divide-y-0 md:divide-x divide-border/40">
+                    <div className="p-6 md:p-8 space-y-2 group transition-colors hover:bg-primary/[0.02]">
+                      <p className="text-[10px] font-black uppercase tracking-widest text-primary/70">Origin</p>
+                      <p className="text-lg md:text-xl font-bold text-foreground leading-tight">{values.pickupAddress}</p>
+                      <p className="text-sm md:text-base text-muted-foreground font-medium">{values.pickupCity}, {values.pickupState}</p>
+                    </div>
+                    <div className="p-6 md:p-8 space-y-2 relative group transition-colors hover:bg-primary/[0.02]">
+                      <div className="hidden md:flex absolute -left-5 top-1/2 -translate-y-1/2 w-10 h-10 bg-white border border-border/60 rounded-full items-center justify-center z-10 shadow-md group-hover:border-primary/40 transition-colors">
+                        <ArrowRight className="w-5 h-5 text-primary" />
                       </div>
-                      <p className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground">Delivery Location</p>
-                      <p className="font-semibold text-foreground">{values.deliveryAddress}</p>
-                      <p className="text-sm text-muted-foreground">{values.deliveryCity}, {values.deliveryState}</p>
+                      <p className="text-[10px] font-black uppercase tracking-widest text-primary/70">Destination</p>
+                      <p className="text-lg md:text-xl font-bold text-foreground leading-tight">{values.deliveryAddress}</p>
+                      <p className="text-sm md:text-base text-muted-foreground font-medium">{values.deliveryCity}, {values.deliveryState}</p>
                     </div>
                   </div>
                 </div>
 
                 {/* Cargo */}
-                <div className="bg-card border border-border rounded-xl overflow-hidden">
-                  <div className="flex items-center gap-2 px-5 py-3 bg-muted/40 border-b border-border">
-                    <Package className="w-4 h-4 text-primary" />
-                    <span className="text-xs font-black uppercase tracking-widest text-muted-foreground">Cargo Specification</span>
+                <div className="bg-card border border-border/60 rounded-3xl overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+                  <div className="flex items-center justify-between px-6 md:px-8 py-4 bg-muted/30 border-b border-border/40">
+                    <div className="flex items-center gap-3">
+                      <Package className="w-5 h-5 text-primary" />
+                      <span className="text-xs font-black uppercase tracking-[0.2em] text-muted-foreground">Cargo Details</span>
+                    </div>
+                    <Badge variant="outline" className="bg-white/50 backdrop-blur-sm text-[10px] font-bold border-border/50">STEP 2</Badge>
                   </div>
-                  <div className="p-5 space-y-4">
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                      <div className="bg-muted/30 rounded-lg p-3 text-center">
-                        <Ruler className="w-4 h-4 text-muted-foreground mx-auto mb-1" />
-                        <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Length</p>
-                        <p className="text-lg font-black text-foreground">{values.length}<span className="text-xs font-medium text-muted-foreground"> ft</span></p>
+                  <div className="p-6 md:p-8">
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6 mb-8">
+                      <div className="bg-muted/40 rounded-2xl p-4 md:p-5 text-center border border-transparent hover:border-primary/20 hover:bg-primary/[0.02] transition-all">
+                        <Ruler className="w-4 h-4 md:w-5 md:h-5 text-primary/60 mx-auto mb-2" />
+                        <p className="text-[10px] font-black uppercase tracking-wider text-muted-foreground mb-1">Length</p>
+                        <p className="text-xl md:text-2xl font-black text-foreground">{values.length}<span className="text-xs md:text-sm font-bold text-muted-foreground ml-1">ft</span></p>
                       </div>
-                      <div className="bg-muted/30 rounded-lg p-3 text-center">
-                        <Ruler className="w-4 h-4 text-muted-foreground mx-auto mb-1 rotate-90" />
-                        <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Width</p>
-                        <p className="text-lg font-black text-foreground">{values.width}<span className="text-xs font-medium text-muted-foreground"> ft</span></p>
+                      <div className="bg-muted/40 rounded-2xl p-4 md:p-5 text-center border border-transparent hover:border-primary/20 hover:bg-primary/[0.02] transition-all">
+                        <Ruler className="w-4 h-4 md:w-5 md:h-5 text-primary/60 mx-auto mb-2 rotate-90" />
+                        <p className="text-[10px] font-black uppercase tracking-wider text-muted-foreground mb-1">Width</p>
+                        <p className="text-xl md:text-2xl font-black text-foreground">{values.width}<span className="text-xs md:text-sm font-bold text-muted-foreground ml-1">ft</span></p>
                       </div>
-                      <div className="bg-muted/30 rounded-lg p-3 text-center">
-                        <Ruler className="w-4 h-4 text-muted-foreground mx-auto mb-1" />
-                        <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Height</p>
-                        <p className="text-lg font-black text-foreground">{values.height}<span className="text-xs font-medium text-muted-foreground"> ft</span></p>
+                      <div className="bg-muted/40 rounded-2xl p-4 md:p-5 text-center border border-transparent hover:border-primary/20 hover:bg-primary/[0.02] transition-all">
+                        <Ruler className="w-4 h-4 md:w-5 md:h-5 text-primary/60 mx-auto mb-2" />
+                        <p className="text-[10px] font-black uppercase tracking-wider text-muted-foreground mb-1">Height</p>
+                        <p className="text-xl md:text-2xl font-black text-foreground">{values.height}<span className="text-xs md:text-sm font-bold text-muted-foreground ml-1">ft</span></p>
                       </div>
-                      <div className="bg-muted/30 rounded-lg p-3 text-center">
-                        <Weight className="w-4 h-4 text-muted-foreground mx-auto mb-1" />
-                        <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Weight</p>
-                        <p className="text-lg font-black text-foreground">{Number(values.weight).toLocaleString()}<span className="text-xs font-medium text-muted-foreground"> {values.weightUnit}</span></p>
+                      <div className="bg-muted/40 rounded-2xl p-4 md:p-5 text-center border border-transparent hover:border-primary/20 hover:bg-primary/[0.02] transition-all">
+                        <Weight className="w-4 h-4 md:w-5 md:h-5 text-primary/60 mx-auto mb-2" />
+                        <p className="text-[10px] font-black uppercase tracking-wider text-muted-foreground mb-1">Weight</p>
+                        <p className="text-xl md:text-2xl font-black text-foreground">{Number(values.weight).toLocaleString()}<span className="text-xs md:text-sm font-bold text-muted-foreground ml-1">{values.weightUnit}</span></p>
                       </div>
                     </div>
-                    <div className="flex items-start gap-3 pt-2 border-t border-border">
-                      <div className="shrink-0">
-                        <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1">Cargo Type</p>
-                        <span className="inline-flex items-center gap-1.5 bg-primary/10 text-primary font-bold text-sm px-3 py-1 rounded-full">
-                          <Truck className="w-3 h-3" />
+                    <div className="flex flex-col md:flex-row items-start gap-6 md:gap-8 pt-6 md:pt-8 border-t border-border/40">
+                      <div className="shrink-0 space-y-2">
+                        <p className="text-[10px] font-black uppercase tracking-widest text-primary/70">Equipment Type</p>
+                        <span className="inline-flex items-center gap-2 bg-primary text-primary-foreground font-black text-sm px-4 md:px-5 py-2 md:py-2.5 rounded-xl shadow-lg shadow-primary/20">
+                          <Truck className="w-4 h-4" />
                           {values.cargoType}
                         </span>
                       </div>
                       {values.cargoDescription && (
-                        <div className="flex-1">
-                          <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1">Description</p>
-                          <p className="text-sm text-muted-foreground leading-relaxed">{values.cargoDescription}</p>
+                        <div className="flex-1 space-y-2 w-full">
+                          <p className="text-[10px] font-black uppercase tracking-widest text-primary/70">Load Description</p>
+                          <div className="p-4 bg-muted/20 rounded-2xl border border-border/40 text-sm md:text-base text-muted-foreground leading-relaxed italic">
+                            "{values.cargoDescription}"
+                          </div>
                         </div>
                       )}
                     </div>
@@ -712,73 +728,91 @@ const NewBooking = ({ initialData, onSuccess, onCancel }: NewBookingProps) => {
                 </div>
 
                 {/* Logistics */}
-                <div className="bg-card border border-border rounded-xl overflow-hidden">
-                  <div className="flex items-center gap-2 px-5 py-3 bg-muted/40 border-b border-border">
-                    <Shield className="w-4 h-4 text-primary" />
-                    <span className="text-xs font-black uppercase tracking-widest text-muted-foreground">Logistics Requirements</span>
+                <div className="bg-card border border-border/60 rounded-3xl overflow-hidden shadow-sm hover:shadow-md transition-shadow">
+                  <div className="flex items-center justify-between px-6 md:px-8 py-4 bg-muted/30 border-b border-border/40">
+                    <div className="flex items-center gap-3">
+                      <Shield className="w-5 h-5 text-primary" />
+                      <span className="text-xs font-black uppercase tracking-[0.2em] text-muted-foreground">Logistics & Support</span>
+                    </div>
+                    <Badge variant="outline" className="bg-white/50 backdrop-blur-sm text-[10px] font-bold border-border/50">STEP 3</Badge>
                   </div>
-                  <div className="p-5 grid grid-cols-1 md:grid-cols-3 gap-4">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 bg-muted rounded-lg shrink-0">
-                        <CalendarDays className="w-4 h-4 text-muted-foreground" />
+                  <div className="p-6 md:p-8 grid grid-cols-1 md:grid-cols-3 gap-4 md:gap-8">
+                    <div className="flex items-start gap-4 p-4 rounded-2xl hover:bg-muted/30 transition-colors">
+                      <div className="p-3 bg-primary/5 rounded-xl shrink-0">
+                        <CalendarDays className="w-5 h-5 text-primary" />
                       </div>
                       <div>
-                        <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Shipment Date</p>
-                        <p className="font-semibold text-sm">{new Date(values.shipmentDate + 'T00:00:00').toLocaleDateString('en-US', { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' })}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <div className={`p-2 rounded-lg shrink-0 ${values.flexibleDates ? 'bg-green-100' : 'bg-muted'}`}>
-                        <Info className={`w-4 h-4 ${values.flexibleDates ? 'text-green-600' : 'text-muted-foreground'}`} />
-                      </div>
-                      <div>
-                        <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Flexible Dates</p>
-                        <p className={`font-semibold text-sm ${values.flexibleDates ? 'text-green-600' : ''}`}>{values.flexibleDates ? 'Yes — open to alternatives' : 'No — fixed date'}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <div className={`p-2 rounded-lg shrink-0 ${(escortReason || values.requiresEscort) ? 'bg-amber-100' : 'bg-muted'}`}>
-                        <AlertCircle className={`w-4 h-4 ${(escortReason || values.requiresEscort) ? 'text-amber-600' : 'text-muted-foreground'}`} />
-                      </div>
-                      <div>
-                        <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">Escort / Pilot Car</p>
-                        <p className={`font-semibold text-sm ${(escortReason || values.requiresEscort) ? 'text-amber-600' : ''}`}>
-                          {(escortReason || values.requiresEscort) ? 'Required' : 'Not Required'}
+                        <p className="text-[10px] font-black uppercase tracking-widest text-primary/70 mb-1">Schedule</p>
+                        <p className="font-bold text-sm md:text-base leading-tight">
+                          {new Date(values.shipmentDate + 'T00:00:00').toLocaleDateString('en-US', { 
+                            weekday: 'long', 
+                            month: 'short', 
+                            day: 'numeric',
+                            year: 'numeric'
+                          })}
                         </p>
-                        {escortReason && <p className="text-[9px] text-amber-600/70 font-medium">{escortReason}</p>}
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-4 p-4 rounded-2xl hover:bg-muted/30 transition-colors">
+                      <div className={`p-3 rounded-xl shrink-0 ${values.flexibleDates ? 'bg-green-500/10' : 'bg-muted'}`}>
+                        <Info className={`w-5 h-5 ${values.flexibleDates ? 'text-green-600' : 'text-muted-foreground'}`} />
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-black uppercase tracking-widest text-primary/70 mb-1">Timing Flexibility</p>
+                        <p className={`font-bold text-sm md:text-base leading-tight ${values.flexibleDates ? 'text-green-600' : ''}`}>
+                          {values.flexibleDates ? 'Flexible on dates' : 'Fixed schedule'}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-4 p-4 rounded-2xl hover:bg-muted/30 transition-colors">
+                      <div className={`p-3 rounded-xl shrink-0 ${(escortReason || values.requiresEscort) ? 'bg-amber-500/10' : 'bg-muted'}`}>
+                        <AlertCircle className={`w-5 h-5 ${(escortReason || values.requiresEscort) ? 'text-amber-600' : 'text-muted-foreground'}`} />
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-black uppercase tracking-widest text-primary/70 mb-1">Pilot Car / Escort</p>
+                        <p className={`font-bold text-sm md:text-base leading-tight ${(escortReason || values.requiresEscort) ? 'text-amber-600' : ''}`}>
+                          {(escortReason || values.requiresEscort) ? 'Required' : 'Not Needed'}
+                        </p>
+                        {escortReason && <p className="text-[10px] text-amber-600/70 font-bold mt-1 uppercase tracking-tighter">{escortReason}</p>}
                       </div>
                     </div>
                   </div>
                   {values.specialInstructions && (
-                    <div className="px-5 pb-5">
-                      <div className="bg-muted/40 rounded-lg p-4 border border-dashed border-border">
-                        <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground mb-1">Special Instructions</p>
-                        <p className="text-sm text-foreground leading-relaxed">{values.specialInstructions}</p>
+                    <div className="px-6 md:px-8 pb-6 md:pb-8">
+                      <div className="bg-primary/[0.03] rounded-2xl p-5 md:p-6 border border-dashed border-primary/20">
+                        <div className="flex items-center gap-2 mb-3">
+                          <FileText className="w-4 h-4 text-primary/60" />
+                          <p className="text-[10px] font-black uppercase tracking-widest text-primary/70">Special Handling Instructions</p>
+                        </div>
+                        <p className="text-sm md:text-base text-foreground leading-relaxed">{values.specialInstructions}</p>
                       </div>
                     </div>
                   )}
                 </div>
 
                 {/* Terms & Conditions */}
-                <div className={`border rounded-xl p-5 transition-colors ${termsAccepted ? 'bg-green-50 border-green-300' : 'bg-muted/30 border-border'}`}>
-                  <label className="flex items-start gap-3 cursor-pointer">
-                    <div className="mt-0.5">
-                      <input
-                        type="checkbox"
-                        checked={termsAccepted}
-                        onChange={(e) => setTermsAccepted(e.target.checked)}
-                        className="w-4 h-4 accent-primary"
-                      />
+                <div className={`border rounded-3xl p-6 md:p-8 transition-all duration-300 ${termsAccepted ? 'bg-green-50/50 border-green-200 shadow-sm' : 'bg-muted/20 border-border/60'}`}>
+                  <label className="flex items-start gap-4 md:gap-5 cursor-pointer group">
+                    <div className="mt-1">
+                      <div className={`w-5 h-5 md:w-6 md:h-6 rounded-lg border-2 flex items-center justify-center transition-all ${termsAccepted ? 'bg-primary border-primary' : 'border-border group-hover:border-primary/50 bg-white'}`}>
+                        <input
+                          type="checkbox"
+                          checked={termsAccepted}
+                          onChange={(e) => setTermsAccepted(e.target.checked)}
+                          className="absolute opacity-0 w-6 h-6 cursor-pointer"
+                        />
+                        {termsAccepted && <Check className="w-4 h-4 text-white" />}
+                      </div>
                     </div>
-                    <div className="space-y-1">
-                      <p className="text-sm font-semibold text-foreground">
-                        I confirm the above details are accurate and agree to High-N-Heavy's{" "}
-                        <a href="/terms" target="_blank" className="text-primary underline underline-offset-2 hover:text-primary/80">Terms of Service</a>
+                    <div className="space-y-2">
+                      <p className="text-sm md:text-base font-bold text-foreground leading-snug">
+                        I verify that all shipment details are accurate and agree to the{" "}
+                        <a href="/terms" target="_blank" className="text-primary hover:underline decoration-2 underline-offset-4">Terms of Service</a>
                         {" "}and{" "}
-                        <a href="/privacy" target="_blank" className="text-primary underline underline-offset-2 hover:text-primary/80">Privacy Policy</a>.
+                        <a href="/privacy" target="_blank" className="text-primary hover:underline decoration-2 underline-offset-4">Privacy Policy</a>.
                       </p>
-                      <p className="text-xs text-muted-foreground">
-                        You will receive a response within 24 hours. No charges apply until your booking is confirmed.
+                      <p className="text-[10px] md:text-sm text-muted-foreground font-medium">
+                        Standard review time is 24 hours. No payment is required at this stage.
                       </p>
                     </div>
                   </label>
@@ -816,7 +850,8 @@ const NewBooking = ({ initialData, onSuccess, onCancel }: NewBookingProps) => {
                     <Loader size="sm" text="Submitting..." />
                   ) : (
                     <>
-                      {!termsAccepted ? 'Please accept terms to continue' : 'Submit Booking Request'}
+                      <span className="hidden md:inline">{!termsAccepted ? 'Please accept terms to continue' : 'Submit Booking Request'}</span>
+                      <span className="md:hidden">{!termsAccepted ? 'Accept Terms' : 'Submit'}</span>
                       <Check size={18} />
                     </>
                   )}

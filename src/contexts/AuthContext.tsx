@@ -93,6 +93,8 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
 
                 localStorage.setItem('token', newToken);
                 localStorage.setItem('user', JSON.stringify(newUser));
+            } else {
+                throw new Error(response.data.message || 'Login failed');
             }
         } catch (error: any) {
             const message = error.response?.data?.message || 'Login failed';

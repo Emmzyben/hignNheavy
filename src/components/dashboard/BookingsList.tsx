@@ -49,6 +49,7 @@ import NewBooking from "./NewBooking";
 import { useAuth } from "@/contexts/AuthContext";
 import ProviderProfileDialog from "./admin/ProviderProfileDialog";
 import { Shield } from "lucide-react";
+import { ImageLightbox } from "@/components/ui/ImageLightbox";
 
 interface BookingsListProps {
   onTrack: (bookingId?: string) => void;
@@ -82,6 +83,8 @@ const BookingsList = ({ onTrack, onMessage, onReview }: BookingsListProps) => {
   const [viewProviderId, setViewProviderId] = useState<string | null>(null);
   const [profileDialogOpen, setProfileDialogOpen] = useState(false);
   const [completingId, setCompletingId] = useState<string | null>(null);
+  const [lightboxOpen, setLightboxOpen] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
   useEffect(() => {
     fetchBookings();
@@ -146,6 +149,11 @@ const BookingsList = ({ onTrack, onMessage, onReview }: BookingsListProps) => {
     } finally {
       setCompletingId(null);
     }
+  };
+
+  const openLightbox = (image: string) => {
+    setSelectedImage(image);
+    setLightboxOpen(true);
   };
 
   const mapBookingForDisplay = (b: any) => ({
@@ -706,20 +714,19 @@ const BookingsList = ({ onTrack, onMessage, onReview }: BookingsListProps) => {
                                   : selectedBooking.rawBooking.delivery_photos;
 
                                 return Array.isArray(photos) && photos.map((photo: string, idx: number) => (
-                                  <div key={idx} className="aspect-square rounded-xl overflow-hidden bg-muted group relative">
+                                  <div 
+                                    key={idx} 
+                                    className="aspect-square rounded-xl overflow-hidden bg-muted group relative cursor-pointer"
+                                    onClick={() => openLightbox(photo)}
+                                  >
                                     <img
                                       src={photo}
                                       alt={`Delivery ${idx + 1}`}
                                       className="w-full h-full object-cover transition-transform group-hover:scale-110"
                                     />
-                                    <a
-                                      href={photo}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity"
-                                    >
+                                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
                                       <Eye className="text-white" size={20} />
-                                    </a>
+                                    </div>
                                   </div>
                                 ));
                               } catch (e) {
@@ -750,7 +757,10 @@ const BookingsList = ({ onTrack, onMessage, onReview }: BookingsListProps) => {
                           <p className="text-xs font-bold uppercase tracking-wider text-muted-foreground mb-3 flex items-center gap-2">
                             <Pencil size={14} /> Digital Signature
                           </p>
-                          <div className="bg-white rounded-xl border p-4 flex items-center justify-center">
+                          <div 
+                            className="bg-white rounded-xl border p-4 flex items-center justify-center cursor-pointer hover:bg-muted/30 transition-colors"
+                            onClick={() => openLightbox(selectedBooking.rawBooking.delivery_signature)}
+                          >
                             <img
                               src={selectedBooking.rawBooking.delivery_signature}
                               alt="Receiver Signature"
@@ -826,6 +836,12 @@ const BookingsList = ({ onTrack, onMessage, onReview }: BookingsListProps) => {
         providerId={viewProviderId}
         open={profileDialogOpen}
         onOpenChange={setProfileDialogOpen}
+      />
+
+      <ImageLightbox
+        src={selectedImage}
+        isOpen={lightboxOpen}
+        onClose={() => setLightboxOpen(false)}
       />
     </div>
   );

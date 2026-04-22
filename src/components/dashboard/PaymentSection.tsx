@@ -53,21 +53,29 @@ const PaymentSection = () => {
         if (bookingId) {
           handlePaypalCapture(token, bookingId);
         }
-      } else {
-        toast.success("Payment successful!", {
-          description: `Your Stripe payment is being processed. It will appear as 'Booked' shortly.`,
-        });
+      } else if (provider === 'stripe') {
+        const bookingId = query.get("booking_id");
+        const sessionId = query.get("session_id");
         
-        // Refresh after a short delay for Stripe webhook
-        setTimeout(() => {
-          fetchAwaitingPayments();
-          fetchPaymentHistory();
-        }, 3000);
+        if (bookingId && sessionId) {
+          handleStripeVerification(sessionId, bookingId);
+        } else {
+          toast.success("Payment successful!", {
+            description: "Your Stripe payment is being processed.",
+          });
+          setTimeout(() => {
+            fetchAwaitingPayments();
+            fetchPaymentHistory();
+          }, 3000);
+        }
       }
 
       // Remove query params from URL
       const newUrl = window.location.pathname + window.location.search
         .replace(/([?&])payment_success=true(&?)/, "$1")
+        .replace(/([?&])provider=stripe(&?)/, "$1")
+        .replace(/([?&])session_id=[^&]+(&?)/, "$1")
+        .replace(/([?&])booking_id=[^&]+(&?)/, "$1")
         .replace(/([?&])provider=paypal(&?)/, "$1")
         .replace(/([?&])token=[^&]+(&?)/, "$1")
         .replace(/([?&])PayerID=[^&]+(&?)/, "$1")
@@ -75,6 +83,29 @@ const PaymentSection = () => {
       window.history.replaceState({}, "", newUrl);
     }
   }, []);
+
+  const handleStripeVerification = async (sessionId: string, bookingId: string) => {
+    setVerifyingPayment(true);
+    try {
+      const response = await api.post("/payments/verify-stripe", {
+        sessionId,
+        bookingId,
+      });
+
+      if (response.data.success) {
+        toast.success("Payment verified!", {
+          description: "Stripe payment confirmed and booking finalized.",
+        });
+        fetchAwaitingPayments();
+        fetchPaymentHistory();
+      }
+    } catch (error: any) {
+      console.error("Stripe verification error:", error);
+      toast.error(error.response?.data?.message || "Failed to verify Stripe payment");
+    } finally {
+      setVerifyingPayment(false);
+    }
+  };
 
   const handlePaypalCapture = async (token: string, bookingId: string) => {
     setVerifyingPayment(true);
@@ -228,7 +259,7 @@ const PaymentSection = () => {
     <div className="space-y-6">
       {verifyingPayment && (
         <div className="bg-primary/5 border border-primary/20 rounded-xl p-6 flex flex-col items-center justify-center text-center">
-          <Loader size="md" text="Verifying PayPal Payment..." />
+          <Loader size="md" text="Verifying Transaction..." />
           <p className="text-sm text-muted-foreground mt-2">Please do not close this window while we confirm your transaction.</p>
         </div>
       )}

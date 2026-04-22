@@ -65,7 +65,7 @@ const SignUp = () => {
     useEffect(() => {
         if (user) {
             // If profile is incomplete, force step 2
-            if (user.profile_completed === false && !['admin', 'driver'].includes(user.role)) {
+            if (user.profile_completed === false && !['admin'].includes(user.role)) {
                 setRole(user.role as "shipper" | "carrier" | "escort");
                 setStep(2);
                 return;
@@ -81,8 +81,7 @@ const SignUp = () => {
                     shipper: '/dashboard/shipper',
                     carrier: '/dashboard/carrier',
                     escort: '/dashboard/escort',
-                    admin: '/dashboard/admin',
-                    driver: '/dashboard/driver'
+                    admin: '/dashboard/admin'
                 }[user.role] || '/';
                 navigate(dashboardRoute, { replace: true });
             }
@@ -151,8 +150,7 @@ const SignUp = () => {
                     shipper: '/dashboard/shipper',
                     carrier: '/dashboard/carrier',
                     escort: '/dashboard/escort',
-                    admin: '/dashboard/admin',
-                    driver: '/dashboard/driver'
+                    admin: '/dashboard/admin'
                 }[role] || '/';
 
                 navigate(dashboardRoute, { replace: true });
@@ -425,7 +423,7 @@ const SignUp = () => {
                     <>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div className="space-y-2">
-                                <Label>drivers_license_number</Label>
+                                <Label>Driver's License Number</Label>
                                 <Input
                                     value={profileData.drivers_license_number}
                                     onChange={(e) => updateProfileField('drivers_license_number', e.target.value)}

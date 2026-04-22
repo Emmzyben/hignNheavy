@@ -28,7 +28,7 @@ const ProtectedRoute = ({ children, allowedRoles }: ProtectedRouteProps) => {
     }
 
     // Check if profile is incomplete (excluding admin and driver for now)
-    if (user.profile_completed === false && !['admin', 'driver'].includes(user.role)) {
+    if (user.profile_completed === false && !['admin'].includes(user.role)) {
         return <Navigate to={`/signup?role=${user.role}`} replace />;
     }
 
@@ -42,8 +42,7 @@ const ProtectedRoute = ({ children, allowedRoles }: ProtectedRouteProps) => {
             shipper: '/dashboard/shipper',
             carrier: '/dashboard/carrier',
             escort: '/dashboard/escort',
-            admin: '/dashboard/admin',
-            driver: '/dashboard/driver'
+            admin: '/dashboard/admin'
         }[user.role] || '/';
 
         return <Navigate to={dashboardRoute} replace />;

@@ -11,7 +11,6 @@ import {
 import logo from "@/assets/logo.svg";
 import { toast } from "sonner";
 import NotificationBell from "./NotificationBell";
-import DriverBottomNav from "../driver/DriverBottomNav";
 
 interface DashboardLayoutProps {
     children: React.ReactNode;
@@ -56,12 +55,6 @@ const MENU_ITEMS: Record<string, any[]> = {
         { id: 'cargo-types', label: 'Cargo Types', icon: Settings },
         { id: 'settings', label: 'Platform Settings', icon: LayoutDashboard },
         { id: 'messages', label: 'Messages', icon: MessageSquare },
-    ],
-    driver: [
-        { id: 'requests', label: 'Available Loads', icon: ClipboardList },
-        { id: 'trips', label: 'My Trips', icon: Package },
-        { id: 'active', label: 'Active Trip', icon: Navigation },
-        { id: 'messages', label: 'Messages', icon: MessageSquare },
     ]
 };
 
@@ -89,7 +82,7 @@ const DashboardLayout = ({ children, activeSection, onSectionChange, onMessage, 
     };
 
     const handleNavClick = (id: string) => {
-        const isSubPage = isProfilePage || location.pathname.includes('/job/') || location.pathname.includes('/shipment/') || location.pathname.includes('/request/') || location.pathname.includes('/booking/');
+        const isSubPage = isProfilePage || location.pathname.includes('/job/') || location.pathname.includes('/shipment/') || location.pathname.includes('/booking/');
 
         if (onSectionChange && !isSubPage) {
             onSectionChange(id);
@@ -196,14 +189,12 @@ const DashboardLayout = ({ children, activeSection, onSectionChange, onMessage, 
     return (
         <div className="min-h-screen bg-muted/30 flex">
             {/* Sidebar - Desktop */}
-            {role !== 'driver' && (
-                <aside className={cn(
-                    "hidden lg:block bg-card border-r border-border transition-all duration-300 h-screen sticky top-0 z-40",
-                    sidebarOpen ? "w-64" : "w-20"
-                )}>
-                    <SidebarContent />
-                </aside>
-            )}
+            <aside className={cn(
+                "hidden lg:block bg-card border-r border-border transition-all duration-300 h-screen sticky top-0 z-40",
+                sidebarOpen ? "w-64" : "w-20"
+            )}>
+                <SidebarContent />
+            </aside>
 
             {/* Sidebar - Mobile */}
             {mobileMenuOpen && (
@@ -230,20 +221,15 @@ const DashboardLayout = ({ children, activeSection, onSectionChange, onMessage, 
             <div className="flex-1 flex flex-col min-w-0">
                 {/* Mobile Header */}
                 <header className="h-16 border-b border-border bg-card/80 backdrop-blur-md sticky top-0 z-30 flex items-center px-4 lg:hidden">
-                    {role !== 'driver' && (
-                        <Button variant="ghost" size="icon" onClick={() => setMobileMenuOpen(true)}>
-                            <Menu size={20} />
-                        </Button>
-                    )}
-                    <div className={cn("flex items-center gap-2", role !== 'driver' ? "ml-4" : "mx-auto")}>
+                    <Button variant="ghost" size="icon" onClick={() => setMobileMenuOpen(true)}>
+                        <Menu size={20} />
+                    </Button>
+                    <div className="flex items-center gap-2 ml-4">
                         <img src={logo} alt="logo" className="w-8" />
-                        <h2 className="font-display font-black text-primary text-lg">HighnHeavy</h2>
                     </div>
-                    {role !== 'driver' && (
-                        <div className="ml-auto">
-                            <NotificationBell />
-                        </div>
-                    )}
+                    <div className="ml-auto">
+                        <NotificationBell />
+                    </div>
                 </header>
 
                 {/* Top Header - Desktop */}
@@ -281,18 +267,11 @@ const DashboardLayout = ({ children, activeSection, onSectionChange, onMessage, 
                     </div>
                 </header>
 
-                <main className={cn(
-                    "flex-1 p-4 lg:p-8",
-                    role === 'driver' ? "pb-24 lg:pb-24" : "pb-4 lg:pb-8"
-                )}>
+                <main className="flex-1 p-4 lg:p-8 pb-4 lg:pb-8">
                     {children}
                 </main>
 
-                {role === 'driver' && (
-                    <DriverBottomNav
-                        activeTab={(activeSection === 'requests' || activeSection === 'active' || activeSection === 'trips' || activeSection === 'messages') ? activeSection : 'profile' as any}
-                    />
-                )}
+
             </div>
         </div>
     );

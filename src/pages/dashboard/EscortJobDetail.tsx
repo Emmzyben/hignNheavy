@@ -15,13 +15,16 @@ import {
     Camera,
     Pencil,
     Eye,
-    FileCheck
+    FileCheck,
+    Clock,
+    CheckCircle2
 } from "lucide-react";
 import Loader from "@/components/ui/Loader";
 import { toast } from "sonner";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import api from "@/lib/api";
 import ProviderProfileDialog from "@/components/dashboard/admin/ProviderProfileDialog";
+import { ImageLightbox } from "@/components/ui/ImageLightbox";
 
 const EscortJobDetail = () => {
     const navigate = useNavigate();
@@ -30,6 +33,8 @@ const EscortJobDetail = () => {
     const [booking, setBooking] = useState<any>(null);
     const [shipperProfileOpen, setShipperProfileOpen] = useState(false);
     const [selectedShipperId, setSelectedShipperId] = useState<string | null>(null);
+    const [lightboxOpen, setLightboxOpen] = useState(false);
+    const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
     useEffect(() => {
         const fetchDetails = async () => {
@@ -51,6 +56,11 @@ const EscortJobDetail = () => {
     const handleOpenShipperProfile = (shipperId: string) => {
         setSelectedShipperId(shipperId);
         setShipperProfileOpen(true);
+    };
+
+    const openLightbox = (image: string) => {
+        setSelectedImage(image);
+        setLightboxOpen(true);
     };
 
     if (loading) {
@@ -78,137 +88,147 @@ const EscortJobDetail = () => {
 
     return (
         <DashboardLayout activeSection="jobs">
-            <div className="max-w-4xl mx-auto space-y-6">
-                <div className="flex items-center gap-4">
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => navigate(-1)}
-                        className="rounded-full"
-                    >
-                        <ArrowLeft className="w-5 h-5" />
-                    </Button>
-                    <div>
-                        <h1 className="text-3xl font-display font-bold">Job Details</h1>
-                        <p className="text-muted-foreground font-medium">
-                            Review all information for this escort assignment
-                        </p>
-                    </div>
-                </div>
-
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    <div className="lg:col-span-2 space-y-6">
-                        <Card className="p-8">
-                            <div className="flex items-start justify-between mb-8">
-                                <div>
-                                    <h2 className="text-2xl font-bold mb-1">{booking.cargo_type}</h2>
-                                    <p className="text-muted-foreground font-medium uppercase tracking-widest text-xs">ID: #{booking.id.split('-')[0]}</p>
-                                </div>
-                                <Badge className={`${isCompleted ? "bg-green-500/10 text-green-600" : "bg-primary/10 text-primary"} border-0 font-bold px-4 py-1.5 uppercase tracking-wider text-xs`}>
+            <div className="max-w-5xl mx-auto space-y-10 pb-20">
+                <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
+                    <div className="flex items-center gap-6">
+                        <Button
+                            variant="outline"
+                            size="icon"
+                            onClick={() => navigate(-1)}
+                            className="rounded-full w-12 h-12 shrink-0 border-border/60 hover:bg-muted/50 transition-all"
+                        >
+                            <ArrowLeft className="w-5 h-5" />
+                        </Button>
+                        <div>
+                            <div className="flex items-center gap-3 mb-1">
+                                <h1 className="text-2xl font-display font-black tracking-tight">Job Details</h1>
+                                <Badge className={`${isCompleted ? "bg-green-500/10 text-green-600" : "bg-primary/10 text-primary"} border-0 font-black px-2.5 py-0.5 uppercase tracking-widest text-[9px]`}>
                                     {booking.status.replace('_', ' ')}
                                 </Badge>
                             </div>
+                            <p className="text-sm text-muted-foreground font-medium">
+                                Assignment overview for Escort Job <span className="text-foreground font-bold">#{booking.id.split('-')[0]}</span>
+                            </p>
+                        </div>
+                    </div>
+                </div>
 
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
-                                <div className="space-y-6">
-                                    <div>
-                                        <p className="text-xs text-muted-foreground font-bold tracking-widest uppercase mb-3">Route Information</p>
-                                        <div className="space-y-4">
-                                            <div className="flex gap-3">
-                                                <MapPin className="h-5 w-5 text-primary shrink-0 mt-0.5" />
-                                                <div>
-                                                    <p className="text-xs text-muted-foreground font-bold uppercase">Pickup</p>
-                                                    <p className="font-bold">{booking.pickup_address}</p>
-                                                    <p className="text-sm text-muted-foreground">{booking.pickup_city}, {booking.pickup_state}</p>
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    <div className="lg:col-span-2 space-y-8">
+                        <Card className="p-0 border-border/60 rounded-3xl overflow-hidden shadow-sm shadow-black/[0.02]">
+                            <div className="p-8 md:p-10 space-y-12">
+                                {/* Route Section */}
+                                <section>
+                                    <div className="flex items-center gap-3 mb-8">
+                                        <div className="p-2 bg-primary/10 rounded-lg">
+                                            <MapPin className="w-4 h-4 text-primary" />
+                                        </div>
+                                        <h3 className="text-xs font-black uppercase tracking-[0.2em] text-muted-foreground">Logistics Path</h3>
+                                    </div>
+
+                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-12 relative">
+                                        <div className="space-y-3">
+                                            <p className="text-[9px] font-black uppercase tracking-widest text-primary/70">Origin</p>
+                                            <div className="space-y-0.5">
+                                                <p className="text-lg font-bold text-foreground leading-tight">{booking.pickup_address}</p>
+                                                <p className="text-sm text-muted-foreground font-medium">{booking.pickup_city}, {booking.pickup_state}</p>
+                                            </div>
+                                            <div className="flex items-center gap-2 pt-1">
+                                                <Calendar className="w-3.5 h-3.5 text-muted-foreground/60" />
+                                                <p className="text-xs font-bold text-foreground/80">
+                                                    {new Date(booking.shipment_date).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+                                                </p>
+                                            </div>
+                                        </div>
+
+                                        <div className="space-y-3 relative">
+                                            <div className="hidden md:block absolute -left-6 top-1/2 -translate-y-1/2 h-12 w-px bg-border/40" />
+                                            <p className="text-[9px] font-black uppercase tracking-widest text-green-600/70">Destination</p>
+                                            <div className="space-y-0.5">
+                                                <p className="text-lg font-bold text-foreground leading-tight">{booking.delivery_address}</p>
+                                                <p className="text-sm text-muted-foreground font-medium">{booking.delivery_city}, {booking.delivery_state}</p>
+                                            </div>
+
+                                        </div>
+                                    </div>
+                                </section>
+
+                                {/* Cargo Section */}
+                                <section className="pt-10 border-t border-border/40">
+                                    <div className="flex items-center gap-3 mb-8">
+                                        <div className="p-2 bg-primary/10 rounded-lg">
+                                            <Package className="w-4 h-4 text-primary" />
+                                        </div>
+                                        <h3 className="text-xs font-black uppercase tracking-[0.2em] text-muted-foreground">Assignment Details</h3>
+                                    </div>
+
+                                    <div className="grid grid-cols-2 md:grid-cols-3 gap-8">
+                                        <div className="space-y-1">
+                                            <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Cargo Weight</p>
+                                            <p className="text-sm font-black text-foreground">{Number(booking.weight_lbs).toLocaleString()} <span className="text-xs font-bold text-muted-foreground uppercase">{booking.weight_unit || 'lbs'}</span></p>
+                                        </div>
+                                        <div className="space-y-1">
+                                            <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Cargo Type</p>
+                                            <p className="text-sm font-black text-foreground">{booking.cargo_type}</p>
+                                        </div>
+                                        <div className="space-y-1">
+                                            <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Dimensions</p>
+                                            <p className="text-xs font-black text-foreground">
+                                                {booking.dimensions_length_ft}L × {booking.dimensions_width_ft}W × {booking.dimensions_height_ft}H
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    {booking.special_instructions && (
+                                        <div className="mt-10 p-6 bg-primary/[0.02] border border-dashed border-primary/20 rounded-2xl">
+                                            <p className="text-[9px] font-black uppercase tracking-widest text-primary/70 mb-2">Special Assignment Instructions</p>
+                                            <p className="text-sm text-muted-foreground leading-relaxed font-medium italic">"{booking.special_instructions}"</p>
+                                        </div>
+                                    )}
+                                </section>
+
+                                {/* Stakeholders Section */}
+                                <section className="pt-10 border-t border-border/40">
+                                    <div className="space-y-4">
+                                        <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Primary Shipper</p>
+                                        <button
+                                            onClick={() => handleOpenShipperProfile(booking.shipper_id)}
+                                            className="flex items-center justify-between w-full md:w-1/2 p-3.5 rounded-2xl bg-muted/30 border border-border/40 hover:bg-muted/50 transition-all group"
+                                        >
+                                            <div className="flex items-center gap-3">
+                                                <div className="w-9 h-9 rounded-full bg-white flex items-center justify-center text-primary text-sm font-black shadow-sm group-hover:scale-110 transition-transform">
+                                                    {booking.shipper_name?.charAt(0)}
+                                                </div>
+                                                <div className="text-left">
+                                                    <p className="text-sm font-bold text-foreground">{booking.shipper_name}</p>
+                                                    <p className="text-[9px] text-muted-foreground font-bold uppercase tracking-tighter">Verified Client</p>
                                                 </div>
                                             </div>
-                                            <div className="flex gap-3">
-                                                <MapPin className="h-5 w-5 text-green-600 shrink-0 mt-0.5" />
-                                                <div>
-                                                    <p className="text-xs text-muted-foreground font-bold uppercase">Delivery</p>
-                                                    <p className="font-bold">{booking.delivery_address}</p>
-                                                    <p className="text-sm text-muted-foreground">{booking.delivery_city}, {booking.delivery_state}</p>
-                                                </div>
-                                            </div>
-                                        </div>
+                                            <ExternalLink size={14} className="text-muted-foreground/40 group-hover:text-primary transition-colors" />
+                                        </button>
                                     </div>
-
-                                    <div>
-                                        <p className="text-xs text-muted-foreground font-bold tracking-widest uppercase mb-3">Schedule</p>
-                                        <div className="flex items-center gap-3 p-3 bg-muted/30 rounded-lg border">
-                                            <Calendar className="h-5 w-5 text-primary" />
-                                            <div>
-                                                <p className="text-xs text-muted-foreground font-bold uppercase">Shipment Date</p>
-                                                <p className="font-bold">{new Date(booking.shipment_date).toLocaleDateString()}</p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <div className="space-y-6">
-                                    <div>
-                                        <p className="text-xs text-muted-foreground font-bold tracking-widest uppercase mb-3">Load Specifications</p>
-                                        <div className="p-4 bg-muted/30 rounded-lg border space-y-3">
-                                            <div className="flex justify-between items-center text-sm">
-                                                <span className="text-muted-foreground font-medium">Weight:</span>
-                                                <span className="font-bold">{Number(booking.weight_lbs).toLocaleString()} {booking.weight_unit || 'lbs'}</span>
-                                            </div>
-                                            <div className="flex justify-between items-center text-sm">
-                                                <span className="text-muted-foreground font-medium">Dimensions:</span>
-                                                <span className="font-bold">{booking.dimensions_length_ft}L x {booking.dimensions_width_ft}W x {booking.dimensions_height_ft}H ft</span>
-                                            </div>
-                                            <div className="flex justify-between items-center text-sm">
-                                                <span className="text-muted-foreground font-medium">Cargo Type:</span>
-                                                <span className="font-bold">{booking.cargo_type}</span>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div>
-                                        <p className="text-xs text-muted-foreground font-bold tracking-widest uppercase mb-3">Special Instructions</p>
-                                        <p className="text-sm italic text-muted-foreground p-4 bg-yellow-50/50 border border-yellow-100 rounded-lg">
-                                            {booking.special_instructions || "No special instructions provided."}
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div className="pt-8 border-t border-border">
-                                <p className="text-xs text-muted-foreground font-bold tracking-widest uppercase mb-4">Shipper Contacts</p>
-                                <button
-                                    onClick={() => handleOpenShipperProfile(booking.shipper_id)}
-                                    className="flex items-center gap-3 p-3 rounded-xl border border-border bg-muted/20 hover:bg-muted/40 transition-colors group w-full"
-                                >
-                                    <div className="p-2 bg-primary/10 rounded-full group-hover:bg-primary/20 transition-colors">
-                                        <User className="h-5 w-5 text-primary" />
-                                    </div>
-                                    <div className="text-left flex-1">
-                                        <p className="text-xs text-muted-foreground font-bold uppercase tracking-wider">Primary Shipper</p>
-                                        <p className="font-bold group-hover:text-primary transition-colors">{booking.shipper_name}</p>
-                                    </div>
-                                    <ExternalLink size={18} className="text-muted-foreground group-hover:text-primary transition-colors" />
-                                </button>
+                                </section>
                             </div>
                         </Card>
 
                         {isCompleted && (
-                            <Card className="p-8 space-y-8">
-                                <div className="flex items-center gap-3">
-                                    <div className="p-2.5 bg-green-500/10 rounded-xl">
-                                        <FileCheck className="text-green-600" size={24} />
+                            <Card className="p-10 space-y-12 border-green-500/20 bg-green-500/[0.01] rounded-3xl">
+                                <div className="flex items-center gap-4">
+                                    <div className="p-2.5 bg-green-500/10 rounded-xl shadow-sm">
+                                        <FileCheck className="text-green-600 w-5 h-5" />
                                     </div>
                                     <div>
-                                        <h3 className="text-xl font-bold">Delivery Proof</h3>
-                                        <p className="text-sm text-muted-foreground font-medium">Official records from assignment completion</p>
+                                        <h3 className="text-lg font-black tracking-tight">Delivery Proof</h3>
+                                        <p className="text-xs text-muted-foreground font-medium">Digital authentication records</p>
                                     </div>
                                 </div>
 
                                 {booking.delivery_photos && (
-                                    <div className="space-y-4">
-                                        <p className="text-xs text-muted-foreground font-bold uppercase tracking-widest flex items-center gap-2">
-                                            <Camera size={14} /> Delivery Photos
+                                    <div className="space-y-6">
+                                        <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+                                            <Camera size={14} className="text-green-600" /> Site Documentation
                                         </p>
-                                        <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                                        <div className="grid grid-cols-2 md:grid-cols-3 gap-6">
                                             {(() => {
                                                 try {
                                                     const photos = typeof booking.delivery_photos === 'string'
@@ -216,20 +236,19 @@ const EscortJobDetail = () => {
                                                         : booking.delivery_photos;
 
                                                     return Array.isArray(photos) && photos.map((photo: string, idx: number) => (
-                                                        <div key={idx} className="aspect-video rounded-xl overflow-hidden bg-muted group relative border shadow-sm">
+                                                        <div 
+                                                            key={idx} 
+                                                            className="aspect-video rounded-2xl overflow-hidden bg-muted group relative border border-border/40 shadow-sm transition-all hover:shadow-md cursor-pointer"
+                                                            onClick={() => openLightbox(photo)}
+                                                        >
                                                             <img
                                                                 src={photo}
                                                                 alt={`Delivery ${idx + 1}`}
                                                                 className="w-full h-full object-cover transition-transform group-hover:scale-105"
                                                             />
-                                                            <a
-                                                                href={photo}
-                                                                target="_blank"
-                                                                rel="noopener noreferrer"
-                                                                className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity"
-                                                            >
-                                                                <Eye className="text-white" size={24} />
-                                                            </a>
+                                                            <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
+                                                                <Eye className="text-white w-6 h-6" />
+                                                            </div>
                                                         </div>
                                                     ));
                                                 } catch (e) {
@@ -240,31 +259,34 @@ const EscortJobDetail = () => {
                                     </div>
                                 )}
 
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-8 pt-8 border-t border-border">
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-12 pt-10 border-t border-border/40">
                                     <div className="space-y-6">
-                                        <div>
-                                            <p className="text-xs text-muted-foreground font-bold uppercase tracking-widest mb-1.5">Receiver Identity</p>
-                                            <p className="text-xl font-bold">{booking.receiver_name || 'Not provided'}</p>
+                                        <div className="space-y-0.5">
+                                            <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Receiver Identity</p>
+                                            <p className="text-lg font-bold text-foreground">{booking.receiver_name || 'Not logged'}</p>
                                         </div>
-                                        <div>
-                                            <p className="text-xs text-muted-foreground font-bold uppercase tracking-widest mb-1.5">Handover Time</p>
-                                            <p className="font-bold">
+                                        <div className="space-y-0.5">
+                                            <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground">Handover Time</p>
+                                            <p className="text-sm font-bold text-foreground">
                                                 {booking.updated_at
-                                                    ? new Date(booking.updated_at).toLocaleString()
+                                                    ? new Date(booking.updated_at).toLocaleString('en-US', { dateStyle: 'medium', timeStyle: 'short' })
                                                     : 'TBD'}
                                             </p>
                                         </div>
                                     </div>
                                     {booking.delivery_signature && (
-                                        <div className="space-y-4 text-center md:text-left">
-                                            <p className="text-xs text-muted-foreground font-bold uppercase tracking-widest flex items-center justify-center md:justify-start gap-2">
-                                                <Pencil size={14} /> Digital Signature
+                                        <div className="space-y-4">
+                                            <p className="text-[9px] font-black uppercase tracking-widest text-muted-foreground flex items-center gap-2">
+                                                <Pencil size={14} className="text-green-600" /> Digital Auth
                                             </p>
-                                            <div className="bg-white rounded-xl border border-border p-6 shadow-inner ring-4 ring-muted/20">
+                                            <div 
+                                                className="bg-white rounded-2xl border border-border/40 p-4 flex items-center justify-center shadow-sm cursor-pointer hover:bg-muted/30 transition-colors"
+                                                onClick={() => openLightbox(booking.delivery_signature)}
+                                            >
                                                 <img
                                                     src={booking.delivery_signature}
                                                     alt="Receiver Signature"
-                                                    className="max-h-32 mx-auto object-contain"
+                                                    className="max-h-20 object-contain opacity-80"
                                                 />
                                             </div>
                                         </div>
@@ -274,52 +296,37 @@ const EscortJobDetail = () => {
                         )}
                     </div>
 
-                    <div className="space-y-6">
-                        <Card className="p-6">
-                            <h3 className="font-bold text-lg mb-4">Financials</h3>
-                            <div className="space-y-4 text-center">
-                                <div className="p-4 bg-primary/5 rounded-xl border border-primary/10">
-                                    <p className="text-xs text-muted-foreground font-bold uppercase tracking-widest mb-1">Total Agreed Price</p>
-                                    <p className="text-3xl font-display font-bold text-primary">
+                    <div className="space-y-8">
+                        <Card className="p-8 border-border/60 rounded-3xl shadow-sm overflow-hidden relative">
+                            <div className="absolute top-0 right-0 w-24 h-24 bg-primary/5 rounded-full -mr-12 -mt-12 blur-3xl" />
+                            <h3 className="font-black text-[9px] uppercase tracking-widest text-muted-foreground mb-6">Financial Overview</h3>
+                            <div className="space-y-6 text-center md:text-left">
+                                <div className="space-y-1">
+                                    <p className="text-[9px] font-black uppercase tracking-widest text-primary/70">Total Settlement</p>
+                                    <p className="text-3xl font-black text-foreground tracking-tighter">
                                         {(booking.agreed_price || booking.amount)
                                             ? `$${Number(booking.agreed_price || booking.amount).toLocaleString()}`
                                             : "PENDING"}
                                     </p>
                                 </div>
-                                <div className={`p-4 rounded-xl font-bold uppercase tracking-widest text-xs border ${isCompleted ? "bg-green-500/10 text-green-600 border-green-500/20" :
+                                <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-black uppercase tracking-widest text-[9px] border ${isCompleted ? "bg-green-500/10 text-green-600 border-green-500/20" :
                                     booking.status === 'in_transit' ? "bg-blue-500/10 text-blue-600 border-blue-500/20" :
-                                        "bg-muted text-muted-foreground border border-border"
+                                        "bg-muted text-muted-foreground border-border/40"
                                     }`}>
-                                    Status: {booking.status.replace('_', ' ')}
-                                </div>
-                            </div>
-                        </Card>
-
-                        <Card className="p-6">
-                            <h3 className="font-bold text-lg mb-4">Job Status</h3>
-                            <div className="space-y-4 text-center">
-                                <div className={`p-4 rounded-xl font-bold uppercase tracking-widest text-sm ${isCompleted ? "bg-green-500/10 text-green-600 border border-green-500/20" :
-                                    booking.status === 'in_transit' ? "bg-blue-500/10 text-blue-600 border border-blue-500/20" :
-                                        "bg-muted text-muted-foreground border border-border"
-                                    }`}>
+                                    {isCompleted ? <CheckCircle2 className="w-2.5 h-2.5" /> : <Clock className="w-2.5 h-2.5" />}
                                     {booking.status.replace('_', ' ')}
                                 </div>
-                                <p className="text-xs text-muted-foreground">
-                                    {isCompleted ? "This job is finished and all records are stored." :
-                                        booking.status === 'in_transit' ? "You are currently assigned to this active job." :
-                                            "Reviewing and preparing for transport."}
-                                </p>
                             </div>
                         </Card>
 
-                        <Card className="p-6 bg-muted/30 border-dashed border-2">
+                        <Card className="p-8 bg-muted/20 border-border/40 rounded-3xl">
                             <div className="flex items-start gap-4">
-                                <div className="p-3 bg-background rounded-xl shadow-sm">
+                                <div className="p-3 bg-white rounded-xl shadow-sm shrink-0">
                                     <Shield className="w-6 h-6 text-primary" />
                                 </div>
                                 <div>
-                                    <p className="font-bold uppercase tracking-widest text-[10px] text-muted-foreground">Insurance & Compliance</p>
-                                    <p className="text-[11px] leading-relaxed text-muted-foreground mt-1">This transport is monitored and verified. All permits must be present in the vehicle before departure.</p>
+                                    <p className="font-black uppercase tracking-widest text-[9px] text-muted-foreground">Insurance & Compliance</p>
+                                    <p className="text-[11px] leading-relaxed text-muted-foreground/80 mt-2 font-medium">This transport is monitored and verified. All permits must be present in the vehicle before departure.</p>
                                 </div>
                             </div>
                         </Card>
@@ -331,6 +338,12 @@ const EscortJobDetail = () => {
                 providerId={selectedShipperId}
                 open={shipperProfileOpen}
                 onOpenChange={setShipperProfileOpen}
+            />
+
+            <ImageLightbox
+                src={selectedImage}
+                isOpen={lightboxOpen}
+                onClose={() => setLightboxOpen(false)}
             />
         </DashboardLayout>
     );

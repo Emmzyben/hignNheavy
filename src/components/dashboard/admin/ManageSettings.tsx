@@ -133,9 +133,23 @@ const ManageSettings = () => {
                 ))}
 
                 {settings.length === 0 && (
-                    <Card>
-                        <CardContent className="py-10 text-center text-muted-foreground">
-                            No settings found in the database.
+                    <Card className="border-dashed border-2">
+                        <CardContent className="py-12 text-center">
+                            <div className="bg-muted w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <RefreshCw className="text-muted-foreground" size={32} />
+                            </div>
+                            <h3 className="text-lg font-bold mb-2">No settings found in the database</h3>
+                            <p className="text-muted-foreground mb-6 max-w-md mx-auto">
+                                The platform configuration table is currently empty. Click the button below to initialize the default platform fee setting.
+                            </p>
+                            <Button 
+                                onClick={() => handleUpdateSetting('platform_fee_percentage', '15')}
+                                disabled={updating === 'platform_fee_percentage'}
+                                className="gap-2"
+                            >
+                                {updating === 'platform_fee_percentage' ? <RefreshCw className="animate-spin" size={16} /> : <Save size={16} />}
+                                Initialize Default Platform Fee (15%)
+                            </Button>
                         </CardContent>
                     </Card>
                 )}

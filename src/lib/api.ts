@@ -32,7 +32,12 @@ api.interceptors.response.use(
             // Token expired or invalid
             localStorage.removeItem('token');
             localStorage.removeItem('user');
-            window.location.href = '/signin';
+            
+            // Only redirect if not already on login/signup pages to avoid reload loop
+            const isAuthPage = window.location.pathname === '/signin' || window.location.pathname === '/signup';
+            if (!isAuthPage) {
+                window.location.href = '/signin';
+            }
         }
         return Promise.reject(error);
     }

@@ -33,15 +33,14 @@ const SignIn = () => {
                     shipper: '/dashboard/shipper',
                     carrier: '/dashboard/carrier',
                     escort: '/dashboard/escort',
-                    admin: '/dashboard/admin',
-                    driver: '/dashboard/driver'
+                    admin: '/dashboard/admin'
                 }[user.role] || '/';
                 navigate(dashboardRoute, { replace: true });
                 return;
             }
 
             // Check if profile is incomplete (excluding admin and driver for now)
-            if (user.profile_completed === false && !['admin', 'driver'].includes(user.role)) {
+            if (user.profile_completed === false && !['admin'].includes(user.role)) {
                 toast.info("Please complete your profile details to continue.");
                 navigate(`/signup?role=${user.role}`, { replace: true });
                 return;
@@ -57,8 +56,7 @@ const SignIn = () => {
                 shipper: '/dashboard/shipper',
                 carrier: '/dashboard/carrier',
                 escort: '/dashboard/escort',
-                admin: '/dashboard/admin',
-                driver: '/dashboard/driver'
+                admin: '/dashboard/admin'
             }[user.role] || '/';
             navigate(dashboardRoute, { replace: true });
         }

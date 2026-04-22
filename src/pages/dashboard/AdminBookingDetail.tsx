@@ -22,13 +22,17 @@ import {
     CheckCircle2,
     Truck,
     Car,
-    Info
+    Info,
+    DollarSign,
+    Receipt,
+    Wallet
 } from "lucide-react";
 import Loader from "@/components/ui/Loader";
 import { toast } from "sonner";
 import DashboardLayout from "@/components/dashboard/DashboardLayout";
 import api from "@/lib/api";
 import ProviderProfileDialog from "@/components/dashboard/admin/ProviderProfileDialog";
+import { ImageLightbox } from "@/components/ui/ImageLightbox";
 
 const statusConfig: Record<string, { label: string; color: string }> = {
     "pending_quote": { label: "Awaiting Quotes", color: "bg-blue-100 text-blue-800" },
@@ -49,6 +53,8 @@ const AdminBookingDetail = () => {
     const [loadingQuotes, setLoadingQuotes] = useState(false);
     const [providerProfileOpen, setProviderProfileOpen] = useState(false);
     const [selectedProviderId, setSelectedProviderId] = useState<string | null>(null);
+    const [lightboxOpen, setLightboxOpen] = useState(false);
+    const [selectedImage, setSelectedImage] = useState<string | null>(null);
 
     // Assignment state
     const [selectedCarrierQuote, setSelectedCarrierQuote] = useState<string>("");
@@ -91,6 +97,11 @@ const AdminBookingDetail = () => {
     const handleOpenProviderProfile = (providerId: string) => {
         setSelectedProviderId(providerId);
         setProviderProfileOpen(true);
+    };
+
+    const openLightbox = (image: string) => {
+        setSelectedImage(image);
+        setLightboxOpen(true);
     };
 
     const handleAssign = async () => {
@@ -427,21 +438,76 @@ const AdminBookingDetail = () => {
                                                 System Message
                                             </p>
                                             <p className={`text-[10px] font-medium ${isCompleted ? 'text-green-800/70' : 'text-blue-800/70'}`}>
-                                                {isCompleted ? 'All delivery records are finalized and archived.' : 'Monitoring active quotes for placement.'}
+                                                {isCompleted ? 'All delivery records are finalized and archived.' : 'Monitoring active booking.'}
                                             </p>
                                         </div>
                                     </div>
                                 </div>
 
 
-
-                                <div className="pt-6 border-t font-mono text-[10px] text-muted-foreground space-y-1 opacity-60">
-                                    <p>UUID: {booking.id}</p>
-                                    <p>CREATED: {booking.created_at}</p>
-                                    <p>ROLE: ADMIN_SECURED</p>
-                                </div>
                             </div>
                         </Card>
+
+                        {/* Financial Summary - Only visible if providers are assigned */}
+                        {(booking.carrier_id || booking.escort_id) && (
+                            <Card className="p-6 border-primary/20 bg-primary/5">
+                                <h3 className="font-bold text-lg mb-6 flex items-center gap-2 text-primary">
+                                    <Receipt className="w-5 h-5" /> Financial Overview
+                                </h3>
+                                <div className="space-y-4">
+                                    <div className="flex justify-between items-center text-sm">
+                                        <div className="flex items-center gap-2">
+                                            <Truck size={14} className="text-muted-foreground" />
+                                            <span className="text-muted-foreground font-medium">Carrier Payout:</span>
+                                        </div>
+                                        <span className="font-bold font-mono">
+                                            ${quotes.find(q => q.provider_id === booking.carrier_id && q.status === 'accepted')?.amount?.toLocaleString() || '0.00'}
+                                        </span>
+                                    </div>
+
+                                    {booking.escort_id && (
+                                        <div className="flex justify-between items-center text-sm">
+                                            <div className="flex items-center gap-2">
+                                                <Car size={14} className="text-muted-foreground" />
+                                                <span className="text-muted-foreground font-medium">Escort Payout:</span>
+                                            </div>
+                                            <span className="font-bold font-mono">
+                                                ${quotes.find(q => q.provider_id === booking.escort_id && q.status === 'accepted')?.amount?.toLocaleString() || '0.00'}
+                                            </span>
+                                        </div>
+                                    )}
+
+                                    <div className="pt-3 border-t border-dashed border-primary/20 space-y-3">
+                                        <div className="flex justify-between items-center text-sm">
+                                            <div className="flex items-center gap-2">
+                                                <TrendingUp size={14} className="text-primary" />
+                                                <span className="text-primary/70 font-medium">System Markup ({booking.markup_value || 15}%):</span>
+                                            </div>
+                                            <span className="font-bold text-primary">
+                                                ${(booking.agreed_price * (parseFloat(booking.markup_value || 15) / 100)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                            </span>
+                                        </div>
+
+                                        <div className="p-4 rounded-xl bg-primary text-primary-foreground shadow-lg shadow-primary/20">
+                                            <div className="flex justify-between items-end">
+                                                <div>
+                                                    <p className="text-[10px] font-black uppercase tracking-widest opacity-70">Total Shipper Pays</p>
+                                                    <p className="text-2xl font-black">
+                                                        ${(booking.agreed_price * (1 + parseFloat(booking.markup_value || 15) / 100)).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                    </p>
+                                                </div>
+                                                <DollarSign size={24} className="opacity-40" />
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex items-center gap-2 text-[10px] text-muted-foreground bg-white/50 p-2 rounded-lg border border-primary/10 italic">
+                                        <Info size={12} />
+                                        <span>Payouts are released to providers after shipper confirms completion.</span>
+                                    </div>
+                                </div>
+                            </Card>
+                        )}
 
                         {isCompleted && (
                             <Card className="p-6 border-green-200 bg-green-50/20">
@@ -467,20 +533,19 @@ const AdminBookingDetail = () => {
                                                             : booking.delivery_photos;
 
                                                         return Array.isArray(photos) && photos.map((photo: string, idx: number) => (
-                                                            <div key={idx} className="aspect-video rounded-lg overflow-hidden bg-muted group relative border">
+                                                            <div 
+                                                                key={idx} 
+                                                                className="aspect-video rounded-lg overflow-hidden bg-muted group relative border cursor-pointer"
+                                                                onClick={() => openLightbox(photo)}
+                                                            >
                                                                 <img
                                                                     src={photo}
                                                                     alt={`Delivery ${idx + 1}`}
                                                                     className="w-full h-full object-cover"
                                                                 />
-                                                                <a
-                                                                    href={photo}
-                                                                    target="_blank"
-                                                                    rel="noopener noreferrer"
-                                                                    className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity"
-                                                                >
+                                                                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity">
                                                                     <Eye className="text-white" size={16} />
-                                                                </a>
+                                                                </div>
                                                             </div>
                                                         ));
                                                     } catch (e) {
@@ -495,7 +560,10 @@ const AdminBookingDetail = () => {
                                             <p className="text-[10px] font-bold text-muted-foreground uppercase flex items-center gap-2">
                                                 <Pencil size={12} /> Digital Sign
                                             </p>
-                                            <div className="h-20 flex items-center justify-center bg-muted/20 rounded-lg">
+                                            <div 
+                                                className="h-20 flex items-center justify-center bg-muted/20 rounded-lg cursor-pointer hover:bg-muted/30 transition-colors"
+                                                onClick={() => openLightbox(booking.delivery_signature)}
+                                            >
                                                 <img src={booking.delivery_signature} className="max-h-full" alt="signature" />
                                             </div>
                                         </div>
@@ -511,12 +579,13 @@ const AdminBookingDetail = () => {
                     <div className="fixed bottom-0 left-0 right-0 z-50 bg-background/80 backdrop-blur-md border-t p-6 lg:pl-[280px]">
                         <div className="max-w-5xl mx-auto flex items-center justify-between gap-8">
                             <div className="hidden md:block">
-                                <p className="text-xs text-muted-foreground uppercase font-black tracking-widest leading-none mb-1">Projected Total Cost</p>
+                                <p className="text-xs text-muted-foreground uppercase font-black tracking-widest leading-none mb-1">Total Shipper Pays (Inc. {markupValue || 15}% Markup)</p>
                                 <p className="text-3xl font-black">
                                     ${(
-                                        (selectedCarrierQuote ? parseFloat(carrierQuotes.find(q => q.id === selectedCarrierQuote)?.amount || 0) : 0) +
-                                        (selectedEscortQuote ? parseFloat(escortQuotes.find(q => q.id === selectedEscortQuote)?.amount || 0) : 0)
-                                    ).toLocaleString()}
+                                        ((selectedCarrierQuote ? parseFloat(carrierQuotes.find(q => q.id === selectedCarrierQuote)?.amount || 0) : 0) +
+                                            (selectedEscortQuote ? parseFloat(escortQuotes.find(q => q.id === selectedEscortQuote)?.amount || 0) : 0)) *
+                                        (1 + (parseFloat(markupValue || "15") / 100))
+                                    ).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                 </p>
                             </div>
                             <div className="flex-1 max-w-lg space-y-1">
@@ -537,8 +606,8 @@ const AdminBookingDetail = () => {
                                 <p className="text-[10px] font-bold text-muted-foreground uppercase">Percentage Markup Override</p>
                                 <div className="flex items-center gap-2">
                                     <div className="relative flex-1">
-                                        <Input 
-                                            type="number" 
+                                        <Input
+                                            type="number"
                                             placeholder="15"
                                             value={markupValue}
                                             onChange={(e) => setMarkupValue(e.target.value)}
@@ -565,6 +634,12 @@ const AdminBookingDetail = () => {
                 providerId={selectedProviderId}
                 open={providerProfileOpen}
                 onOpenChange={setProviderProfileOpen}
+            />
+
+            <ImageLightbox
+                src={selectedImage}
+                isOpen={lightboxOpen}
+                onClose={() => setLightboxOpen(false)}
             />
         </DashboardLayout>
     );
