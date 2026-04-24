@@ -64,7 +64,7 @@ const Footer = () => {
               </li>
 
               <li>
-                <a href="#" className="text-gray-300 hover:text-primary transition-colors">
+                <a href="https://expo.dev/artifacts/eas/ivnt3Gjn3nTVFdCj5wGXpT.apk" target="_blank" rel="noopener noreferrer" className="text-gray-300 hover:text-primary transition-colors">
                   Download Driver App
                 </a>
               </li>

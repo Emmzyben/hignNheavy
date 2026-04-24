@@ -411,7 +411,7 @@ const Index = () => {
                 <Button 
                   size="lg" 
                   className="bg-[#1E2B3E] hover:bg-[#2c3e56] text-white px-8 py-5 rounded-xl flex items-center gap-3 group transition-all duration-300 hover:scale-105"
-                  onClick={() => window.open('#', '_blank')}
+                  onClick={() => window.open('https://expo.dev/artifacts/eas/ivnt3Gjn3nTVFdCj5wGXpT.apk', '_blank')}
                 >
                   <Download className="w-5 h-5 group-hover:animate-bounce" />
                   <div className="text-left">
