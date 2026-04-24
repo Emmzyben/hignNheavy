@@ -6,8 +6,10 @@ import { Shield, Truck, MapPin, FileCheck, ArrowRight, CheckCircle2 } from "luci
 import heroImage from "@/assets/hero.svg";
 import heroImage2 from "@/assets/frame.svg";
 import heroImage3 from "@/assets/image4.svg";
+import driverAppImage from "@/assets/hignnheavy_app.jpeg";
 import { motion } from "framer-motion";
 import { Link } from "react-router-dom";
+import { Download } from "lucide-react";
 const fadeInUp = {
   initial: { opacity: 0, y: 20 },
   animate: { opacity: 1, y: 0 },
@@ -25,6 +27,24 @@ const staggerContainer = {
 };
 
 const Index = () => {
+  const driverFeatures = [
+    {
+      icon: <MapPin className="w-6 h-6" />,
+      title: "Real-time Tracking",
+      description: "Provide live location updates to shippers and manage your routes efficiently.",
+    },
+    {
+      icon: <FileCheck className="w-6 h-6" />,
+      title: "Easy Status Updates",
+      description: "Update shipment progress with a single tap, from pickup to delivery.",
+    },
+    {
+      icon: <Shield className="w-6 h-6" />,
+      title: "Secure Communication",
+      description: "Direct line of communication with the logistics team for any on-road issues.",
+    },
+  ];
+
   const features = [
     {
       icon: <FileCheck className="w-8 h-8" />,
@@ -349,6 +369,75 @@ const Index = () => {
                 alt="Oversize cargo transport"
                 className="rounded-2xl shadow-2xl"
               />
+            </motion.div>
+          </div>
+        </div>
+      </section>
+
+      {/* Driver App Section */}
+      <section className="py-20 bg-white overflow-hidden">
+        <div className="container mx-auto px-4">
+          <div className="flex flex-col lg:flex-row items-center gap-16">
+            <motion.div
+              initial={{ opacity: 0, x: -50 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.8 }}
+              className="flex-1"
+            >
+              <p className="text-sm font-bold text-primary tracking-wider uppercase mb-4">Driver Dedicated</p>
+              <h2 className="text-3xl md:text-4xl font-display font-black mb-6">
+                Take HighnHeavy <br /> <span className="text-primary">On the Road</span>
+              </h2>
+              <p className="text-lg text-muted-foreground mb-8">
+                Our mobile app is designed specifically for drivers. Manage your loads, update statuses in real-time, and streamline your workflow directly from your smartphone.
+              </p>
+              
+              <div className="grid sm:grid-cols-2 gap-6 mb-10">
+                {driverFeatures.map((feature, index) => (
+                  <div key={index} className="flex gap-4">
+                    <div className="flex-shrink-0 w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center text-primary">
+                      {feature.icon}
+                    </div>
+                    <div>
+                      <h4 className="font-bold text-base mb-1">{feature.title}</h4>
+                      <p className="text-muted-foreground text-sm leading-relaxed">{feature.description}</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              <div className="flex flex-col sm:flex-row gap-4">
+                <Button 
+                  size="lg" 
+                  className="bg-[#1E2B3E] hover:bg-[#2c3e56] text-white px-8 py-5 rounded-xl flex items-center gap-3 group transition-all duration-300 hover:scale-105"
+                  onClick={() => window.open('#', '_blank')}
+                >
+                  <Download className="w-5 h-5 group-hover:animate-bounce" />
+                  <div className="text-left">
+                    <div className="text-[10px] uppercase font-bold opacity-80 leading-none">Download for Android</div>
+                    <div className="text-base font-bold leading-tight">Direct APK Link</div>
+                  </div>
+                </Button>
+              </div>
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, x: 50 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.8 }}
+              className="flex-1 relative"
+            >
+              <div className="relative z-10 p-4 lg:p-0">
+                 <img 
+                  src={driverAppImage} 
+                  alt="HighnHeavy Driver App" 
+                  className="w-full max-w-[280px] mx-auto rounded-[2rem] shadow-[0_20px_50px_rgba(0,0,0,0.15)] border-4 border-gray-900"
+                />
+              </div>
+              {/* Decorative elements */}
+              <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[120%] h-[120%] bg-primary/5 rounded-full blur-3xl -z-0" />
             </motion.div>
           </div>
         </div>
