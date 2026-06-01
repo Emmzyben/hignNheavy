@@ -52,8 +52,7 @@ const ManageQuotes = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-bold">Match Center</h1>
-          <p className="text-muted-foreground">Assign providers to pending load requests</p>
+          <p className="text-muted-foreground font-medium">Assign providers to pending load requests</p>
         </div>
       </div>
 

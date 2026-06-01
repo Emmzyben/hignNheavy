@@ -189,8 +189,7 @@ const VehiclesManagement = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-display font-bold">My Vehicles</h1>
-          <p className="text-muted-foreground">Manage your escort vehicles and equipment</p>
+          <p className="text-muted-foreground font-medium">Manage your escort vehicles and equipment</p>
         </div>
         <Button onClick={() => { resetForm(); setDialogOpen(true); }} className="gap-2 shadow-md">
           <Plus className="h-4 w-4" />

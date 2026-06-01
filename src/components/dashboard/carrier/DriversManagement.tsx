@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { User, Plus, Edit, Trash2, Mail, Phone, Shield, Truck, Loader2 } from 'lucide-react';
+import { User, Plus, Edit, Trash2, Mail, Phone, Shield, Truck, Loader2, MessageSquare } from 'lucide-react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -25,9 +25,10 @@ interface Driver {
 interface DriversManagementProps {
   initialDrivers?: any[];
   onRefresh?: () => void;
+  onMessage?: (participantId: string) => void;
 }
 
-const DriversManagement = ({ initialDrivers, onRefresh }: DriversManagementProps) => {
+const DriversManagement = ({ initialDrivers, onRefresh, onMessage }: DriversManagementProps) => {
   const mapDrivers = (data: any[]) => data.map((d: any) => ({
     id: d.id,
     name: d.name,
@@ -219,8 +220,7 @@ const DriversManagement = ({ initialDrivers, onRefresh }: DriversManagementProps
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-display font-bold">Driver Management</h1>
-          <p className="text-muted-foreground">Add and manage your drivers</p>
+          <p className="text-muted-foreground font-medium">Add and manage your drivers</p>
         </div>
         <Button onClick={handleOpenAdd}>
           <Plus className="h-4 w-4 mr-2" />
@@ -304,6 +304,11 @@ const DriversManagement = ({ initialDrivers, onRefresh }: DriversManagementProps
                     </div>
                   </div>
                   <div className="flex gap-2">
+                    {onMessage && (
+                      <Button size="icon" variant="ghost" onClick={() => onMessage(driver.id)} title="Chat with driver">
+                        <MessageSquare className="h-4 w-4" />
+                      </Button>
+                    )}
                     <Button size="icon" variant="ghost" onClick={() => handleOpenEdit(driver)}>
                       <Edit className="h-4 w-4" />
                     </Button>

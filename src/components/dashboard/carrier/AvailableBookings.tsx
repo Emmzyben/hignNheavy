@@ -193,8 +193,7 @@ const AvailableBookings = ({ onMessage, initialDrivers, initialEquipment }: Avai
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-display font-bold">Carrier Load Board</h1>
-          <p className="text-muted-foreground">Find work and manage your active bids</p>
+          <p className="text-muted-foreground font-medium">Find work and manage your active bids</p>
         </div>
       </div>
 
@@ -357,16 +356,7 @@ const AvailableBookings = ({ onMessage, initialDrivers, initialEquipment }: Avai
                         <Button variant="ghost" size="sm" onClick={() => openDetailsDialog(booking)} className="text-xs font-bold hover:bg-primary/5 hover:text-primary rounded-lg h-9">
                           View Details
                         </Button>
-                        {activeTab === 'won-jobs' && onMessage && (
-                          <Button
-                            variant="outline"
-                            size="sm"
-                            className="text-xs font-bold gap-2 rounded-lg h-9"
-                            onClick={() => onMessage(booking.id, booking.shipper_id)}
-                          >
-                            <MessageSquare size={14} /> Chat
-                          </Button>
-                        )}
+
                       </div>
                     </div>
                   </div>
@@ -464,17 +454,10 @@ const AvailableBookings = ({ onMessage, initialDrivers, initialEquipment }: Avai
         </DialogContent>
       </Dialog>
 
-      {/* Shipper Profile Dialog */}
       <ProviderProfileDialog
         providerId={selectedShipperId}
         open={shipperProfileOpen}
         onOpenChange={setShipperProfileOpen}
-        onMessage={(participantId) => {
-          if (onMessage && selectedBooking) {
-            onMessage(selectedBooking.id, participantId);
-            setShipperProfileOpen(false);
-          }
-        }}
       />
     </div>
   );

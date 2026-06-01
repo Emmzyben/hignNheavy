@@ -213,8 +213,7 @@ const EquipmentManagement = ({ initialEquipment, onRefresh }: EquipmentManagemen
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-display font-bold">Equipment</h1>
-          <p className="text-muted-foreground">Manage your fleet and trailers</p>
+          <p className="text-muted-foreground font-medium">Manage your fleet and trailers</p>
         </div>
         <Button onClick={handleOpenAdd}>
           <Plus className="h-4 w-4 mr-2" />

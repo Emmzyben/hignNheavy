@@ -121,8 +121,7 @@ const CarrierMessaging = () => {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-display font-bold">Messages</h1>
-        <p className="text-muted-foreground">Communicate with shippers and admin</p>
+        <p className="text-muted-foreground font-medium">Communicate with shippers and admin</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 h-[calc(100vh-250px)]">

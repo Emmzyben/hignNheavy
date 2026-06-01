@@ -537,12 +537,14 @@ const BookingsList = ({ onTrack, onMessage, onReview }: BookingsListProps) => {
                               >
                                 <User size={16} className="mr-2" /> Profile
                               </Button>
-                              <Button
-                                className="flex-1 rounded-xl h-10 font-bold"
-                                onClick={() => onMessage(selectedBooking.id, selectedBooking.carrier_id)}
-                              >
-                                <MessageSquare size={16} className="mr-2" /> Chat
-                              </Button>
+                              {user?.role === 'admin' && (
+                                <Button
+                                  className="flex-1 rounded-xl h-10 font-bold"
+                                  onClick={() => onMessage(selectedBooking.id, selectedBooking.carrier_id)}
+                                >
+                                  <MessageSquare size={16} className="mr-2" /> Chat
+                                </Button>
+                              )}
                             </div>
                           </div>
                         )}
@@ -568,12 +570,14 @@ const BookingsList = ({ onTrack, onMessage, onReview }: BookingsListProps) => {
                               >
                                 <User size={16} className="mr-2" /> Profile
                               </Button>
-                              <Button
-                                className="flex-1 rounded-xl h-10 font-bold bg-purple-600 text-white hover:bg-purple-700"
-                                onClick={() => onMessage(selectedBooking.id, selectedBooking.escort_id)}
-                              >
-                                <MessageSquare size={16} className="mr-2" /> Chat
-                              </Button>
+                              {user?.role === 'admin' && (
+                                <Button
+                                  className="flex-1 rounded-xl h-10 font-bold bg-purple-600 text-white hover:bg-purple-700"
+                                  onClick={() => onMessage(selectedBooking.id, selectedBooking.escort_id)}
+                                >
+                                  <MessageSquare size={16} className="mr-2" /> Chat
+                                </Button>
+                              )}
                             </div>
                           </div>
                         )}

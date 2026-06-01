@@ -29,8 +29,7 @@ const PricingSettings = () => {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-display font-bold">Pricing Settings</h1>
-        <p className="text-muted-foreground">Configure your rates and pricing structure</p>
+        <p className="text-muted-foreground font-medium">Configure your rates and pricing structure</p>
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">

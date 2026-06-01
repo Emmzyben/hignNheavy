@@ -163,8 +163,7 @@ const ManageShippers = ({ onMessage }: ManageShippersProps) => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Manage Shippers</h1>
-          <p className="text-muted-foreground">View and manage all registered shippers</p>
+          <p className="text-muted-foreground font-medium">View and manage all registered shippers</p>
         </div>
       </div>
 

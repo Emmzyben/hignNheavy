@@ -89,8 +89,7 @@ const ManageCarriers = ({ onMessage }: ManageCarriersProps) => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Manage Carriers</h1>
-          <p className="text-muted-foreground">Approve and monitor carrier accounts</p>
+          <p className="text-muted-foreground font-medium">Approve and monitor carrier accounts</p>
         </div>
       </div>
 

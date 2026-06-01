@@ -34,6 +34,22 @@ const statusConfig: Record<string, { label: string; color: string }> = {
   "awaiting_payment": { label: "Awaiting Payment", color: "bg-yellow-100 text-yellow-800" },
 };
 
+const getAvailableStatuses = (currentStatus: string) => {
+  switch (currentStatus) {
+    case "pending_quote":
+    case "quoted":
+      return [currentStatus, "cancelled"];
+    case "booked":
+      return ["booked", "in_transit", "delivered"];
+    case "in_transit":
+      return ["in_transit", "delivered"];
+    case "delivered":
+      return ["delivered", "completed"];
+    default:
+      return [currentStatus];
+  }
+};
+
 const ManageBookings = () => {
   const navigate = useNavigate();
   const [bookings, setBookings] = useState<any[]>([]);
@@ -83,8 +99,7 @@ const ManageBookings = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">All Bookings</h1>
-          <p className="text-muted-foreground">Monitor all cargo and shipments in the system</p>
+          <p className="text-muted-foreground font-medium">Monitor all cargo and shipments in the system</p>
         </div>
       </div>
 
@@ -167,12 +182,11 @@ const ManageBookings = () => {
                             <SelectValue placeholder="Status" />
                           </SelectTrigger>
                           <SelectContent>
-                            <SelectItem value="pending_quote">Pending Quote</SelectItem>
-                            <SelectItem value="booked">Booked</SelectItem>
-                            <SelectItem value="in_transit">In Transit</SelectItem>
-                            <SelectItem value="delivered">Delivered</SelectItem>
-                            <SelectItem value="completed">Completed</SelectItem>
-                            <SelectItem value="cancelled">Cancelled</SelectItem>
+                            {getAvailableStatuses(booking.status).map((status) => (
+                              <SelectItem key={status} value={status}>
+                                {statusConfig[status]?.label || status}
+                              </SelectItem>
+                            ))}
                           </SelectContent>
                         </Select>
                         <Button

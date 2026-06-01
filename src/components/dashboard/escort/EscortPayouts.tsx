@@ -83,8 +83,7 @@ const EscortPayouts = () => {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-display font-bold">Payouts</h1>
-        <p className="text-muted-foreground">View your pending payouts and completed jobs</p>
+        <p className="text-muted-foreground font-medium">View your pending payouts and completed jobs</p>
       </div>
 
       {/* Stats */}

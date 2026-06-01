@@ -106,8 +106,7 @@ const ManageCargoTypes = () => {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-2xl font-display font-bold">Cargo Types</h2>
-          <p className="text-muted-foreground">Manage the cargo types available in the booking form.</p>
+          <p className="text-muted-foreground font-medium">Manage the cargo types available in the booking form.</p>
         </div>
         {!isAdding && !editingId && (
           <Button onClick={() => setIsAdding(true)}>

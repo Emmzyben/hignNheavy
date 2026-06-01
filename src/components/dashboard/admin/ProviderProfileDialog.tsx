@@ -32,6 +32,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import api from "@/lib/api";
 import { toast } from "sonner";
 import Loader from "@/components/ui/Loader";
+import { useAuth } from "@/contexts/AuthContext";
 
 interface ProviderProfileDialogProps {
     providerId: string | null;
@@ -49,6 +50,47 @@ const ProviderProfileDialog = ({ providerId, open, onOpenChange, onMessage }: Pr
     const [stats, setStats] = useState<any>(null);
     const [loadingSecondary, setLoadingSecondary] = useState(false);
     const [isImageExpanded, setIsImageExpanded] = useState(false);
+    const { user } = useAuth();
+
+    const canChatWithUser = () => {
+        if (!user || !profile) return false;
+        if (user.role === 'admin') return true;
+        if (profile.role === 'admin') return true;
+
+        if (user.role === 'carrier' && profile.role === 'driver') {
+            return true; // Backend will enforce employer_id relationship
+        }
+
+        return false;
+    };
+
+    const isMaskingRequired = () => {
+        if (!user || !profile || user.role === 'admin') return false;
+        if (user.id === profile.id) return false;
+        // Shipper looking at Carrier/Escort
+        if (user.role === 'shipper' && (profile.role === 'carrier' || profile.role === 'escort')) return true;
+        // Carrier/Escort looking at Shipper
+        if ((user.role === 'carrier' || user.role === 'escort') && profile.role === 'shipper') return true;
+        return false;
+    };
+
+    const maskEmail = (email: string) => {
+        if (!email || !isMaskingRequired()) return email;
+        const [name, domain] = email.split('@');
+        return `${name.charAt(0)}****@${domain}`;
+    };
+
+    const maskPhone = (phone: string) => {
+        if (!phone || !isMaskingRequired()) return phone;
+        return phone.replace(/\d/g, (m, i) => (i > 3 && i < phone.length - 2 ? "*" : m));
+    };
+
+    const maskAddress = (address: string) => {
+        if (!address || address === 'N/A' || !isMaskingRequired()) return address;
+        return address.substring(0, 4) + "***********";
+    };
+
+
 
     useEffect(() => {
         if (providerId && open) {
@@ -168,17 +210,17 @@ const ProviderProfileDialog = ({ providerId, open, onOpenChange, onMessage }: Pr
                                 <div className="flex flex-wrap gap-4 text-sm pt-2">
                                     <div className="flex items-center gap-1 text-muted-foreground">
                                         <Mail size={14} className="text-primary" />
-                                        {profile.email}
+                                        {maskEmail(profile.email)}
                                     </div>
                                     <div className="flex items-center gap-1 text-muted-foreground">
                                         <Phone size={14} className="text-primary" />
-                                        {profile.contact_number || profile.phone_number || 'N/A'}
+                                        {maskPhone(profile.contact_number || profile.phone_number || 'N/A')}
                                     </div>
                                     <div className="flex items-center gap-1 text-muted-foreground">
                                         <Calendar size={14} className="text-primary" />
                                         Joined {new Date(profile.created_at).toLocaleDateString()}
                                     </div>
-                                    {onMessage && (
+                                    {onMessage && canChatWithUser() && (
                                         <Button
                                             size="sm"
                                             variant="secondary"
@@ -219,7 +261,7 @@ const ProviderProfileDialog = ({ providerId, open, onOpenChange, onMessage }: Pr
                                         <div className="flex gap-3">
                                             <MapPin size={18} className="text-muted-foreground shrink-0 mt-0.5" />
                                             <div>
-                                                <p className="font-medium">{profile.address || 'N/A'}</p>
+                                                <p className="font-medium">{maskAddress(profile.address || 'N/A')}</p>
                                                 <p className="text-sm text-muted-foreground">{profile.city}, {profile.state} {profile.zip_code}</p>
                                             </div>
                                         </div>

@@ -71,14 +71,13 @@ const ManageSettings = () => {
             <div className="flex items-center justify-between">
                 <div>
                     <div className="flex items-center gap-3">
-                        <h2 className="text-3xl font-display font-black">Platform Fee Settings</h2>
                         {settings.find(s => s.id === 'platform_fee_percentage') && (
                             <div className="bg-primary/10 text-primary px-3 py-1 rounded-full text-sm font-bold border border-primary/20">
-                                Current Fee: {settings.find(s => s.id === 'platform_fee_percentage')?.value}%
+                                Current Platform Fee: {settings.find(s => s.id === 'platform_fee_percentage')?.value}%
                             </div>
                         )}
                     </div>
-                    <p className="text-muted-foreground font-medium">Configure global platform fee</p>
+                    <p className="text-muted-foreground font-medium">Configure global platform fee and commissions</p>
                 </div>
                 <Button variant="outline" size="sm" onClick={fetchSettings} className="gap-2">
                     <RefreshCw size={16} />

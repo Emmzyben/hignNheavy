@@ -34,8 +34,7 @@ const PricingSettings = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-3xl font-display font-bold">Pricing Settings</h1>
-          <p className="text-muted-foreground">Configure your escort service rates</p>
+          <p className="text-muted-foreground font-medium">Configure your escort service rates</p>
         </div>
         <Button onClick={handleSave} className="gap-2">
           <Save className="h-4 w-4" />

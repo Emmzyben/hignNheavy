@@ -197,8 +197,7 @@ const AvailableBookings: React.FC<AvailableBookingsProps> = ({ onMessage, initia
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-display font-bold">Escort Job Board</h1>
-          <p className="text-muted-foreground">Find escort opportunities and manage your bids</p>
+          <p className="text-muted-foreground font-medium">Find escort opportunities and manage your bids</p>
         </div>
       </div>
 
@@ -319,16 +318,7 @@ const AvailableBookings: React.FC<AvailableBookingsProps> = ({ onMessage, initia
                           <Badge variant="outline" className="bg-blue-50 text-blue-700 border-blue-200 justify-center h-8 uppercase text-[10px] font-bold tracking-widest">
                             {booking.status.replace('_', ' ')}
                           </Badge>
-                          {onMessage && (
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              className="w-[140px] h-8 text-xs gap-1"
-                              onClick={() => onMessage(booking.id, booking.shipper_id)}
-                            >
-                              <MessageSquare size={14} /> Chat Shipper
-                            </Button>
-                          )}
+
                         </div>
                       </div>
                     )}
@@ -410,12 +400,6 @@ const AvailableBookings: React.FC<AvailableBookingsProps> = ({ onMessage, initia
         providerId={selectedShipperId}
         open={shipperProfileOpen}
         onOpenChange={setShipperProfileOpen}
-        onMessage={(participantId) => {
-          if (onMessage && selectedBooking) {
-            onMessage(selectedBooking.id, participantId);
-            setShipperProfileOpen(false);
-          }
-        }}
       />
     </div>
   );

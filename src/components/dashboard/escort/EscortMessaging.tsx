@@ -105,8 +105,7 @@ const EscortMessaging = () => {
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-display font-bold">Messages</h1>
-        <p className="text-muted-foreground">Communicate with shippers and admin</p>
+        <p className="text-muted-foreground font-medium">Communicate with shippers and admin</p>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>

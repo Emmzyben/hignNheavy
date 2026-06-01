@@ -73,6 +73,7 @@ const CarrierDashboard = () => {
         return <DriversManagement 
           initialDrivers={drivers} 
           onRefresh={fetchDashboardResources} 
+          onMessage={handleStartChat}
         />;
       case 'equipment':
         return <EquipmentManagement 

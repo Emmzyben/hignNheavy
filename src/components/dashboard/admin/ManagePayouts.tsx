@@ -123,8 +123,7 @@ const ManagePayouts = () => {
   return (
     <div className="space-y-8">
       <div>
-        <h1 className="text-3xl font-display font-bold">Financial Settlement Center</h1>
-        <p className="text-muted-foreground">Manage withdrawals and track system-wide platform earnings</p>
+        <p className="text-muted-foreground font-medium">Manage withdrawals and track system-wide platform earnings</p>
       </div>
 
       {/* System Overview Stats */}

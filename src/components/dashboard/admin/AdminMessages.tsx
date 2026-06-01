@@ -10,8 +10,7 @@ const AdminMessages: React.FC<AdminMessagesProps> = ({ initialContext, initialCo
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-2xl font-bold">Admin Messages</h1>
-        <p className="text-muted-foreground">
+        <p className="text-muted-foreground font-medium">
           View and respond to messages from shippers, carriers, and escorts
         </p>
       </div>
